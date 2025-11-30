@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Access Denied</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link
+      rel="stylesheet"
+      href="//cdn.webix.com/edge/webix.css"
+      type="text/css" />
+    <script src="//cdn.webix.com/edge/webix.js" type="text/javascript"></script>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/main.css') }}" />
+  </head>
+  <body
+    class="min-h-screen bg-gray-100 flex items-center justify-center p-4 font-sans">
+    <div
+      class="bg-[var(--pure-white)] p-10 rounded-xl shadow-lg max-w-md w-full flex flex-col items-center text-center">
+      <div class="p-4 rounded-full gradient-btn mb-6">
+        <svg
+          class="w-20 h-20 text-white"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+        </svg>
+      </div>
+
+      <h1 class="text-3xl font-bold text-[var(--sunrise-red)] mb-2">
+        Access Denied
+      </h1>
+
+      <p class="text-lg text-[var(--text-primary)] mb-8">
+        Kamu tidak memiliki akses ke halaman ini atau kamu belum login!
+      </p>
+
+      <a
+        href="/"
+        class="bg-[var(--)] text-[var(--pure-white)] gradient-btn font-semibold py-3 px-8 rounded-lg shadow-md hover:bg-[var(--warm-gray)] transition-all duration-300">
+        Kembali ke Login
+      </a>
+    </div>
+  </body>
+</html>

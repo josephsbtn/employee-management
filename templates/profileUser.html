@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aventra - My Profile</title>
+
+    <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="../static/js/sideNavbar.js"></script>
+
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(to right, var(--arunika-gold), var(--sunrise-red));
+        opacity: 0.9;
+      }
+      
+      .profile-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      
+      .info-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+      }
+      
+      .info-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 font-sans">
+    <div class="flex h-screen bg-gray-200">
+      <aside
+        class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm z-20"
+        id="sidebar-container"
+      ></aside>
+
+      <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+        <header
+          class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
+          id="top-nav"
+        ></header>
+
+        <main class="flex-1 overflow-y-auto p-6 bg-[var(--bg-light)]">
+          <div class="max-w-7xl mx-auto">
+            <div class="mb-6">
+              <h1 class="text-3xl font-bold text-gray-800">My Profile</h1>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+              <div class="lg:col-span-1">
+                <div class="gradient-btn rounded-xl shadow-lg p-8 text-white text-center" id="profileCard">
+                  
+                </div>
+
+                <div class="mt-6 bg-white rounded-xl shadow-md p-6 hidden" id="quickStats">
+                  <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Stats</h3>
+                  <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-600">Employee ID</span>
+                      <span class="font-semibold text-gray-800" id="profileId">-</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-600">Join Date</span>
+                      <span class="font-semibold text-gray-800" id="profileJoinDate">-</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                      <span class="text-gray-600">Branch Team</span>
+                      <span class="font-semibold text-gray-800" id="profileBranchTeam">-</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6 info-card hidden" id="personalInfo">
+                  <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Personal Information</h3>
+                  </div>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="text-sm text-gray-500 block mb-1">Full Name</label>
+                      <p class="text-gray-800 font-medium" id="detailName">-</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 block mb-1">Email Address</label>
+                      <p class="text-gray-800 font-medium" id="detailEmail">-</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 block mb-1">Role</label>
+                      <p class="text-gray-800 font-medium" id="detailRole">-</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 block mb-1">Status</label>
+                      <p class="font-medium" id="detailStatus">-</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Employment Details -->
+                <div class="bg-white rounded-xl shadow-md p-6 mb-6 info-card hidden" id="employmentInfo">
+                  <h3 class="text-xl font-semibold text-gray-800 mb-4">Employment Details</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label class="text-sm text-gray-500 block mb-1">Salary Per Day</label>
+                      <p class="text-gray-800 font-medium text-lg" id="detailSalary">-</p>
+                    </div>
+                    <div>
+                      <label class="text-sm text-gray-500 block mb-1">Annual Leave Balance</label>
+                      <p class="text-gray-800 font-medium text-lg" id="detailLeave">-</p>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Branch Information -->
+                <div class="bg-white rounded-xl shadow-md p-6 info-card hidden " id="branchInfo">
+                  
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      let profileData = null;
+
+      const renderProfile = (data) => {
+        const profileCard = document.getElementById('profileCard');
+        profileCard.innerHTML = `
+          <div class="w-32 h-32 mx-auto mb-4 bg-white rounded-full flex items-center justify-center text-6xl shadow-lg">
+            👨‍💼
+          </div>
+          <h2 class="text-2xl font-bold mb-2" id="profileName">${data.name || 'Loading'}</h2>
+          <p class="text-white text-opacity-90 mb-1" id="profileEmail">${data.email || 'Loading'}</p>
+          <div class="inline-block mt-3 px-4 py-1.5 bg-white bg-opacity-20 rounded-full text-sm font-medium">
+            <span id="profileRole">${data.role || 'Loading'}</span>
+          </div>
+          <div class="mt-6 pt-6 border-t border-white border-opacity-30">
+            <div class="flex justify-around text-center">
+              <div>
+                <p class="text-2xl font-bold" id="profileLeaveBalance">${data.workDays || '0'}</p>
+                <p class="text-sm text-white text-opacity-80">Working Duration</p>
+              </div>
+              <div class="border-l border-white border-opacity-30"></div>
+              <div>
+                <p class="text-2xl font-bold" id="profileStatus">Active</p>
+                <p class="text-sm text-white text-opacity-80">Status</p>
+              </div>
+            </div>
+          </div>
+        `;
+      };
+
+      const branchInformation = (data) => {
+        return `
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Branch Information</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="text-sm text-gray-500 block mb-1">Branch Name</label>
+              <p class="text-gray-800 font-medium text-lg" id="branchName">${data.branch?.name || 'N/A'}</p>
+            </div>
+            <div>
+              <label class="text-sm text-gray-500 block mb-1">Branch Address</label>
+              <p class="text-gray-800 font-medium" id="branchAddress">${data.branch?.address || 'N/A'}</p>
+            </div>
+            <div>
+              <label class="text-sm text-gray-500 block mb-1">Total Team Members</label>
+              <p class="text-gray-800 font-medium" id="profileBranchTeam">${data.branch?.employees?.length || 0}</p>
+            </div>
+          </div>
+        `;
+      };
+
+      const employmentInformation = (data) => {
+        return `
+          <h3 class="text-xl font-semibold text-gray-800 mb-4">Employment Details</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label class="text-sm text-gray-500 block mb-1">Salary Per Day</label>
+              <p class="text-gray-800 font-medium text-lg" id="detailSalary">${data.salaryPerDay ? "Rp " + Number(data.salaryPerDay).toLocaleString("id-ID") : 'N/A'}</p>
+            </div>
+            <div>
+              <label class="text-sm text-gray-500 block mb-1">Annual Leave Balance</label>
+              <p class="text-gray-800 font-medium text-lg" id="detailLeave">${data.annualLeaveBalance || 0}</p>
+            </div>
+          </div>
+        `;
+      };
+
+      const quickStatRender = (data) => {
+        const joinDate = data.createdAt ? new Date(data.createdAt).toLocaleDateString("en-US", { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A';
+        
+        return `
+          <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Stats</h3>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">${data.role === "owner" ? "Total Team Members" : "Annual Leave Balance"}</span>
+              <span class="font-semibold text-gray-800">${data.role === "owner" ? (data.branch?.employees?.length || 0) : (data.annualLeaveBalance || 0)}</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Join Date</span>
+              <span class="font-semibold text-gray-800">${joinDate}</span>
+            </div>
+            ${data.role !== "owner" && data.salaryPerDay ? `
+            <div class="flex justify-between items-center">
+              <span class="text-gray-600">Salary Per Day</span>
+              <span class="font-semibold text-gray-800">${"Rp " + Number(data.salaryPerDay).toLocaleString("id-ID")}</span>
+            </div>
+            ` : ''}
+          </div>
+        `;
+      };
+
+      const loadProfile = async () => {
+        try {
+          console.log("LOADING GET PROFILE");
+          const res = await axios.get("/api/employees/profile");
+          console.log("Profile Data:", res.data);
+          
+          if (res.data.status && res.data.data) {
+            profileData = res.data.data;
+            displayProfile(profileData);
+          } else {
+            webix.message({
+              type: "error",
+              text: "Failed to load profile data!",
+              expire: 3000,
+            });
+          }
+        } catch (err) {
+          console.error("Failed to load profile:", err);
+          webix.message({
+            type: "error",
+            text: "Failed to load profile data!",
+            expire: 3000,
+          });
+        }
+      };
+
+      const displayProfile = (data) => {
+        renderProfile(data);
+
+        const branchContainer = document.getElementById("branchInfo");
+        const employmentInfo = document.getElementById("employmentInfo");
+        const quickStats = document.getElementById("quickStats");
+        const personalInfo = document.getElementById("personalInfo");
+
+        quickStats.classList.remove("hidden");
+        quickStats.innerHTML = quickStatRender(data);
+
+        if (data.role !== "owner") {
+          employmentInfo.classList.remove("hidden");
+          employmentInfo.innerHTML = employmentInformation(data);
+        }
+
+        const teamCount = data.branch?.employees?.length || 0;
+        if (teamCount > 0 || data.branch) {
+          console.log("teamCount", teamCount);
+          branchContainer.classList.remove("hidden");
+          branchContainer.innerHTML = branchInformation(data);
+        }
+
+        personalInfo.classList.remove("hidden");
+        document.getElementById("detailName").textContent = data.name || 'N/A';
+        document.getElementById("detailEmail").textContent = data.email || 'N/A';
+        document.getElementById("detailRole").textContent = data.role || 'N/A';
+        
+        const statusElement = document.getElementById("detailStatus");
+        if (data.status === "active") {
+          statusElement.textContent = "Active";
+          statusElement.className = "font-medium text-green-600";
+        } else {
+          statusElement.textContent = "Inactive";
+          statusElement.className = "font-medium text-red-600";
+        }
+      };
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        topNav();
+        navbarSide();
+        await loadProfile();
+      });
+    </script>
+  </body>
+</html>

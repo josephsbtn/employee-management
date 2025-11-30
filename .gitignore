@@ -1,0 +1,9 @@
+.venv
+validation/__pycache__
+validation/employee/__pycache__
+repo/__pycache__
+routes/__pycache__
+utils/__pycache__
+service/__pycache__
+routes/page/__pycache__
+test.py

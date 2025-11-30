@@ -1,0 +1,11 @@
+Flask
+pymongo
+Flask-JWT-Extended
+marshmallow
+Werkzeug
+python-dotenv
+bcrypt
+gunicorn
+eventlet
+pendulum
+bleach

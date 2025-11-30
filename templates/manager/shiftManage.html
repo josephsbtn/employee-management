@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aventra - Shift</title>
+
+    <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="../static/js/sideNavbar.js"></script>
+    <script src="../static/js/shift.js"></script>
+
+  </head>
+
+  <body class="bg-gray-100 font-sans">
+    <div class="flex h-screen bg-gray-200">
+      <aside
+        class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm z-20"
+        id="sidebar-container"
+      ></aside>
+
+      <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+        <header
+          class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
+          id="top-nav"
+        ></header>
+
+        <main class="flex-1 overflow-y-auto p-6 bg-[var(--bg-light)]">
+          <div class="flex flex-col justify-start items-center mb-1 p-4 rounded-lg h-full" id="content">
+            <div class="w-full flex justify-between items-center mb-4" id="content-tools">
+              <h1 class="text-2xl font-semibold text-[var(--text-primary)]">Shift</h1>
+              <div class="flex items-center space-x-3">
+                <label for="datePicker" class="text-gray-700 font-medium">Date:</label>
+                <input
+                  type="date"
+                  id="datePicker"
+                  class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--arunika-gold)]"
+                />
+              </div>
+            </div>
+
+            <div class="w-full rounded-xl shadow-sm h-full flex gap-4 items-center justify-start " id="shiftList">
+              <div class="w-[40%] bg-white h-full flex flex-col items-start justify-start p-4 rounded-lg gap-y-1 overflow-y-auto" id="employees-list">
+                <h1 class="text-2xl font-semibold text-[var(--text-primary)] mb-3">Employees</h1>
+                <div class="grid gap-2 w-full " id="employees-container"></div>
+                
+                
+              </div>
+              <div class="w-full bg-white h-full flex flex-col items-start justify-start p-4 rounded-lg overflow-y-auto" id="dayShift-list">
+                 <h1 class="text-2xl font-semibold text-[var(--text-primary)] mb-3">Day Shift</h1>
+                <div class="grid gap-2 overflow-y-auto w-full" id="dayShift-container"></div>
+              </div>
+              <div class="w-full bg-white h-full flex flex-col items-start justify-start p-4 rounded-lg overflow-y-auto" id="nightShift-list">
+                <h1 class="text-2xl font-semibold text-[var(--text-primary)] mb-3">Night Shift</h1>
+                <div class="grid gap-2 overflow-y-auto w-full" id="nightShift-container"></div>
+              </div>
+            </div>
+            <div class="w-full bg-white h-fit mt-4 flex items-center justify-between p-2 rounded-lg gap-x-2" id="makeShiftBtn">
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        topNav();
+        navbarSide(pagesAdmin);
+      });
+    </script>
+  </body>
+</html>

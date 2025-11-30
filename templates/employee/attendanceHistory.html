@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omise - History Log</title>
+
+    <!-- Webix + Tailwind -->
+    <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="../../static/js/sideNavbar.js"></script>
+
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(to right, var(--arunika-gold), var(--morning-blue));
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 font-sans">
+    <div class="flex h-screen bg-gray-200">
+      <aside
+        class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm z-20"
+        id="sidebar-container"
+      ></aside>
+
+      <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+        <header
+          class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
+          id="top-nav"
+        ></header>
+
+        <main class="flex-1 overflow-y-auto p-6 bg-[var(--bg-light)]">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6" id="content"></div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", async () => {
+        topNav();
+        navbarSide(pagesAdmin);
+
+        const historyApiUrl = "/api/history"
+          
+
+        webix.ui({
+          container: "content",
+          rows: [
+            {
+              view: "toolbar",
+              height: 50,
+              cols: [
+                { view: "label", label: "📜 Activity History" },
+                {},
+                {
+                  id: "refreshHistoryBtn",
+                  width: 150,
+                  borderless: true,
+                  template: `
+                    <a class="refreshHistoryBtn flex items-center justify-end gap-2 w-fit bg-[var(--calm-blue)] hover:bg-[var(--morning-blue)] transition duration-150 text-white px-3 py-1.5 rounded-lg">
+                      <svg class="w-5 h-5 pt-1" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><path fill="currentColor" d="M2.6 5.6C3.5 3.5 5.6 2 8 2c3 0 5.4 2.2 5.9 5h2c-.5-3.9-3.8-7-7.9-7c-3 0-5.6 1.6-6.9 4.1L0 3v4h4L2.6 5.6zM16 9h-4.1l1.5 1.4c-.9 2.1-3 3.6-5.5 3.6C5 14 2.5 11.8 2 9H0c.5 3.9 3.9 7 7.9 7c3 0 5.6-1.7 7-4.1L16 13V9z"/></svg>
+                      <span class="text-xs font-medium">Refresh Logs</span>
+                    </a>`,
+                  onClick: {
+                    refreshHistoryBtn: function () {
+                      loadHistory();
+                    },
+                  },
+                },
+              ],
+            },
+            {
+              view: "datatable",
+              id: "historyTable",
+              select: "row",
+              scroll: "y",
+              minHeight: 500,
+              rowHeight: 50,
+              columns: [
+                {
+                  id: "employeeName",
+                  header: "Employee",
+                  fillspace: true,
+                  css: "text-left text-sm font-medium",
+                },
+                {
+                  id: "type",
+                  header: "Category",
+                  width: 150,
+                  css: "text-left text-sm",
+                  template: (obj) => {
+                    const colorMap = {
+                      auth: "text-blue-500",
+                      branch: "text-amber-600",
+                      employee: "text-green-600",
+                      shift: "text-purple-600",
+                      leave: "text-red-600",
+                      attendance: "text-yellow-600",
+                    };
+                    const color = colorMap[obj.type] || "text-gray-500";
+                    return `<span class="${color} font-semibold">${obj.type}</span>`;
+                  },
+                },
+                {
+                  id: "description",
+                  header: "Activity",
+                  fillspace: 2,
+                  css: "text-left text-sm",
+                  template: (obj) =>
+                    obj.description?.length > 80
+                      ? obj.description.slice(0, 80) + "..."
+                      : obj.description,
+                },
+                {
+                  id: "createdAt",
+                  header: "Date & Time",
+                  width: 230,
+                  css: "text-left text-sm text-gray-600",
+                  template: (obj) =>
+                    obj.createdAt
+                      ? new Date(obj.createdAt).toLocaleString("id-ID")
+                      : "-",
+                },
+              ],
+            },
+          ],
+        });
+
+       async function loadHistory() {
+            const table = $$("historyTable");
+            table.clearAll();
+            
+            try {
+              // Ambil data user saat ini
+              const userData = await currentUser();
+              
+              const res = await axios.get(`${historyApiUrl}/all/user`);  
+              const payload = Array.isArray(res.data)
+                ? res.data
+                : res.data?.data || [];
+
+              console.log("payload", payload);
+
+              let formatted = payload.map((item, idx) => ({
+                id: item._id || idx,
+                employeeName: item.employeeName || "Unknown",
+                type: item.type || "-",
+                description: item.description || "-",
+                createdAt: item.createdAt || "",
+              }));
+
+              // Sort berdasarkan tanggal terbaru
+              formatted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+               console.log("formatted", formatted);
+              
+              // Filter hanya attendance & leave untuk user yang sedang login
+              formatted = formatted.filter((item) => 
+                item.type === "attendance" || item.type === "leave"
+              );
+
+              table.parse(formatted);
+            } catch (err) {
+              console.error("Failed to load history:", err);
+              webix.message({ type: "error", text: "Failed to load history" });
+            }
+          }
+
+        loadHistory();
+      });
+    </script>
+  </body>
+</html>

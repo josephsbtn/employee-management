@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aventra - Employees</title>
+
+    <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="../static/js/sideNavbar.js"></script>
+
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(to right, var(--arunika-gold), var(--morning-blue));
+      }
+    </style>
+  </head>
+
+  <body class="bg-gray-100 font-sans">
+    <div class="flex h-screen bg-gray-200">
+      <aside
+        class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm z-20"
+        id="sidebar-container"
+      ></aside>
+
+      <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+        <header
+          class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
+          id="top-nav"
+        ></header>
+
+        <main class="flex-1 overflow-y-auto p-6 bg-[var(--bg-light)]">
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6" id="content"></div>
+        </main>
+      </div>
+    </div>
+
+    <script>
+      let branches = [];
+      
+      const loadEmployees = async () => {
+        try {
+          const res = await axios.get("/api/employees/all");
+          console.log("RES DATA EMPLOYEE :", res.data.data);
+          
+          const sortedData = res.data.data.sort((a, b) => {
+            const dateA = new Date(a.createdAt || 0);
+            const dateB = new Date(b.createdAt || 0);
+            return dateB - dateA;
+          });
+          
+          $$("employeeTable").clearAll();
+          $$("employeeTable").parse(sortedData);
+        } catch (err) {
+          console.error("Failed to load employees:", err);
+          webix.message({
+            type: "error",
+            text: "Failed to load employees!",
+            expire: 3000,
+          });
+        }
+      };
+
+      const loadBranch = async () => {
+        try {
+          if (branches.length > 0) return branches;
+          
+          const res = await axios.get("/api/branch");
+          console.log("RES DATA BRANCH :", res.data.data);
+          
+          branches = res.data.data;
+          return res.data.data;
+        } catch (err) {
+          console.error("Failed to load branches:", err);
+          webix.message({
+            type: "error",
+            text: "Failed to load branches!",
+            expire: 3000,
+          });
+          return [];
+        }
+      };
+
+      const applyFilters = () => {
+        const searchValue = $$("searchInput").getValue().toLowerCase();
+        const statusValue = $$("statusFilter").getValue();
+        const roleValue = $$("roleFilter").getValue();
+        const branchValue = $$("branchFilter").getValue();
+
+        $$("employeeTable").filter(function (obj) {
+          const name = (obj.name || "").toLowerCase();
+          const email = (obj.email || "").toLowerCase();
+          const matchSearch = name.indexOf(searchValue) !== -1 || email.indexOf(searchValue) !== -1;
+
+          const matchStatus = statusValue === "all" || obj.status === statusValue;
+
+          const matchRole = roleValue === "all" || (obj.role || "").toLowerCase() === roleValue;
+
+          const matchBranch = branchValue === "all" || obj.branch?._id === branchValue;
+
+          return matchSearch && matchStatus && matchRole && matchBranch;
+        });
+      };
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        topNav();
+        await loadBranch();
+        console.log("branches", branches);
+        navbarSide(pagesAdmin);
+        
+        let edit = false;
+
+        webix.ui({
+          container: "content",
+          rows: [
+            {
+              view: "toolbar",
+              height: 50,
+              cols: [
+                { view: "label", label: "📋 Employee List" },
+                {},
+                {
+                  id: "addEmployeeBtn",
+                  width: 170,
+                  borderless: true,
+                  template: `
+                    <a class="addEmployeeBtn flex items-center justify-end gap-2 w-fit bg-green-500 hover:bg-green-600 transition duration-150 text-white px-3 py-1.5 rounded-lg cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                      <span class="text-xs font-medium">Add Employee</span>
+                    </a>`,
+                  onClick: {
+                    addEmployeeBtn: async function () {
+                      console.log("Add Employee Clicked");
+                      edit = false;
+                      
+                      const form = $$("employeeForm");
+                      
+                      form.clear();
+                      form.clearValidation();
+                      
+                      form.elements.password.enable();
+                      
+                      const branchCombo = form.elements.branchId;
+                      branchCombo.define("options", branches.map((branch) => ({ 
+                        id: branch._id, 
+                        value: branch.name 
+                      })));
+                      branchCombo.refresh();
+
+                      if (branches.length === 1) {
+                        branchCombo.disable();
+                        form.setValues({ branchId: branches[0]._id });
+                      } else {
+                        branchCombo.enable();
+                      }
+
+                      $$("employeeWindow").show();
+                    },
+                  },
+                },
+              ],
+            },
+            {
+              view: "toolbar",
+              height: 60,
+              padding: 10,
+              cols: [
+                {
+                  view: "text",
+                  id: "searchInput",
+                  placeholder: "🔍 Search by name or email...",
+                  width: 300,
+                  on: {
+                    onTimedKeyPress: function () {
+                      const value = this.getValue().toLowerCase();
+                      $$("employeeTable").filter(function (obj) {
+                        const name = (obj.name || "").toLowerCase();
+                        const email = (obj.email || "").toLowerCase();
+                        return name.indexOf(value) !== -1 || email.indexOf(value) !== -1;
+                      });
+                    },
+                  },
+                },
+                {
+                  view: "combo",
+                  id: "statusFilter",
+                  placeholder: "Filter by Status",
+                  width: 180,
+                  options: [
+                    { id: "all", value: "All Status" },
+                    { id: "active", value: "Active" },
+                    { id: "inactive", value: "Inactive" },
+                  ],
+                  value: "all",
+                  on: {
+                    onChange: function () {
+                      applyFilters();
+                    },
+                  },
+                },
+                {
+                  view: "combo",
+                  id: "roleFilter",
+                  placeholder: "Filter by Role",
+                  width: 180,
+                  options: [
+                    { id: "all", value: "All Roles" },
+                    { id: "owner", value: "Owner" },
+                    { id: "manager", value: "Manager" },
+                    { id: "employee", value: "Employee" },
+                  ],
+                  value: "all",
+                  on: {
+                    onChange: function () {
+                      applyFilters();
+                    },
+                  },
+                },
+                {
+                  view: "combo",
+                  id: "branchFilter",
+                  placeholder: "Filter by Branch",
+                  width: 200,
+                  options: [{ id: "all", value: "All Branches" }],
+                  value: "all",
+                  on: {
+                    onChange: function () {
+                      applyFilters();
+                    },
+                  },
+                },
+                {},
+                {
+                  view: "button",
+                  value: "Reset Filters",
+                  width: 130,
+                  css: "webix_secondary",
+                  click: function () {
+                    $$("searchInput").setValue("");
+                    $$("statusFilter").setValue("all");
+                    $$("roleFilter").setValue("all");
+                    $$("branchFilter").setValue("all");
+                    $$("employeeTable").filter();
+                  },
+                },
+              ],
+            },
+            {
+              view: "datatable",
+              id: "employeeTable",
+              select: "row",
+              scroll: "y",
+              minHeight: 500,
+              rowHeight: 50,
+              css: "webix_shadow_medium",
+              columns: [
+                { 
+                  id: "email", 
+                  header: {text: "Email", css: "text-center"}, 
+                  fillspace: true, 
+                  css: "text-center text-sm" 
+                },
+                { 
+                  id: "name", 
+                  header: { text: "Name", css: "text-center" },
+                  fillspace: true, 
+                  css: "text-center text-sm" 
+                },
+                {
+                  id: "branch",
+                  header: { text: "Branch", css: "text-center" },
+                  fillspace: true,
+                  css: "text-center text-sm",
+                  template: (obj) => obj.branch?.name || "-",
+                },
+                {
+                  id: "salaryPerDay",
+                  header: { text: "Salary Per Day", css: "text-center" },
+                  fillspace: true,
+                  css: "text-center text-sm",
+                  template: (obj) =>
+                    obj.salaryPerDay
+                      ? "Rp " + Number(obj.salaryPerDay).toLocaleString("id-ID")
+                      : "-",
+                },
+                {
+                  id: "status",
+                  header: { text: "Status", css: "text-center" },
+                  fillspace: true,
+                  css: "text-center text-sm",
+                  template: (obj) => {
+                    const color = obj.status === "active" ? "text-green-600" : "text-red-600";
+                    return `<span class="${color} font-semibold">${obj.status || 'N/A'}</span>`;
+                  },
+                },
+                {
+                  id: "role",
+                  header: "Role",
+                  fillspace: true,
+                  css: "text-center text-sm",
+                  template: (obj) =>
+                    obj.role
+                      ? obj.role.charAt(0).toUpperCase() + obj.role.slice(1).toLowerCase()
+                      : "-",
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  width: 250,
+                  css: "text-center text-sm",
+                  template: (obj) => {
+                    return `
+                      <div class="flex justify-center items-center gap-3 h-full">
+                        ${obj.role !== "owner" ? 
+                        `<button class="editBtn px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-[var(--calm-blue)] transition duration-150">
+                          ✏️ Edit
+                        </button>`
+                        : ""
+                        }
+                        
+                        ${
+                          obj.status === "active"
+                            ? `<button class="statusBtn bg-[var(--sunrise-red)] px-3 py-1.5 rounded-lg text-sm font-medium text-white hover:bg-orange-500 transition-all duration-150">
+                                🙅‍♂️ Disable
+                              </button>`
+                            : `<button class="statusBtn bg-[var(--calm-blue)] px-3 py-1.5 rounded-lg text-sm font-medium text-white hover:bg-green-500 transition-all duration-150">
+                                🙎‍♂️ Activate
+                              </button>`
+                        }
+                      </div>
+                    `;
+                  },
+                },
+              ],
+              onClick: {
+                editBtn: async function (e, id) {
+                  try {
+                    const value = this.getItem(id);
+                    edit = true;
+
+                    const loadedBranches = await loadBranch();
+                    
+                    const form = $$("employeeForm");
+                    const branchCombo = form.elements.branchId;
+                    
+                    branchCombo.define("options", loadedBranches.map((branch) => ({ 
+                      id: branch._id, 
+                      value: branch.name 
+                    })));
+                    branchCombo.refresh();
+
+                    const formValues = {
+                      ...value,
+                      branchId: value.branch?._id || value.branchId,
+                    };
+
+                    if (loadedBranches.length === 1) {
+                      branchCombo.disable();
+                    } else {
+                      branchCombo.enable();
+                    }
+
+                    form.setValues(formValues);
+                    form.clearValidation();
+                    form.elements.password.disable();
+
+                    $$("employeeWindow").show();
+                  } catch (err) {
+                    console.error("Edit error:", err);
+                    webix.message({
+                      type: "error",
+                      text: "Failed to load employee data!",
+                      expire: 3000,
+                    });
+                  }
+                },
+
+                statusBtn: function (e, id) {
+                  const item = this.getItem(id);
+                  const isActive = item.status === "active";
+                  const action = isActive ? "Disable" : "Activate";
+                  const endpoint = isActive ? "fire" : "activate";
+
+                  webix.confirm({
+                    title: `Confirm ${action}`,
+                    text: `${action} employee "<b>${item.name}</b>"?`,
+                    callback: async function (result) {
+                      if (result) {
+                        try {
+                          console.log("item._id:", item._id);
+                          const res = await axios.put(`/api/employees/${endpoint}/${item._id}`);
+                          
+                          if (res.data.status) {
+                            webix.message(`✅ Employee ${action}d successfully!`);
+                            loadEmployees();
+                          } else {
+                            webix.alert(`❌ Failed to ${action.toLowerCase()} employee! ${res.data.message}`);
+                          }
+                        } catch (err) {
+                          console.error(err);
+                          webix.alert(`❌ Failed to ${action.toLowerCase()} employee!`);
+                        }
+                      }
+                    },
+                  });
+                },
+              },
+            },
+          ],
+        });
+
+        webix.ui({
+          view: "window",
+          id: "employeeWindow",
+          width: 700,
+          position: "center",
+          modal: true,
+          head: "Employee Form",
+          body: {
+            view: "form",
+            id: "employeeForm",
+            elements: [
+              {
+                cols: [
+                  {
+                    rows: [
+                      { 
+                        view: "text", 
+                        name: "name", 
+                        label: "Name", 
+                        required: true 
+                      },
+                      { 
+                        view: "text", 
+                        name: "email", 
+                        label: "Email", 
+                        required: true 
+                      },
+                    ],
+                  },
+                  { width: 30 },
+                  {
+                    rows: [
+                      { 
+                        view: "text", 
+                        name: "password", 
+                        label: "Password", 
+                        type: "password", 
+                        required: true 
+                      },
+                      { 
+                        view: "text", 
+                        name: "salaryPerDay", 
+                        label: "Salary / Day", 
+                        required: true 
+                      },
+                    ],
+                  },
+                ],
+              },
+              {
+                view: "combo",
+                name: "role",
+                label: "Role",
+                required: true,
+                options: await listRole(),
+              },
+              {
+                view: "combo",
+                name: "branchId",
+                label: "Branch Store",
+                required: true,
+                options: [],
+              },
+              {
+                margin: 10,
+                cols: [
+                  {
+                    view: "button",
+                    value: "Save",
+                    css: "webix_primary",
+                    click: async () => {
+                      const form = $$("employeeForm");
+                      
+                      if (!form.validate()) {
+                        webix.message({
+                          type: "error",
+                          text: "Please fill all required fields correctly!",
+                          expire: 3000,
+                        });
+                        return;
+                      }
+
+                      const values = form.getValues();
+                      values.role = values.role.toLowerCase();
+
+                      try {
+                        if (edit) {
+                          const payload = {
+                            name: values.name,
+                            email: values.email,
+                            salaryPerDay: values.salaryPerDay,
+                            role: values.role,
+                            branchId: values.branchId,
+                          };
+                          
+                          const res = await axios.put(`/api/employees/update/${values._id}`, payload);
+                          
+                          webix.message("✅ Employee updated successfully!");
+                          edit = false;
+                          $$("employeeWindow").hide();
+                          loadEmployees();
+                        } else {
+                          await axios.post("/api/employees/create", values);
+                          
+                          webix.message("✅ Employee added successfully!");
+                          $$("employeeWindow").hide();
+                          loadEmployees();
+                        }
+                      } catch (err) {
+                        console.error("Failed to save employee:", err);
+                        
+                        if (err?.response?.data?.errors) {
+                          Object.entries(err.response.data.errors).forEach(([key, value]) => {
+                            form.markInvalid(key, Array.isArray(value) ? value.join(", ") : value);
+                          });
+                        } else {
+                          webix.message({
+                            type: "error",
+                            text: err?.response?.data?.message || "Failed to save employee!",
+                            expire: 5000,
+                          });
+                        }
+                      }
+                    },
+                  },
+                  {
+                    view: "button",
+                    value: "Cancel",
+                    css: "webix_danger",
+                    click: () => {
+                      edit = false;
+                      $$("employeeWindow").hide();
+                    },
+                  },
+                ],
+              },
+            ],
+            rules: {
+              name: webix.rules.isNotEmpty,
+              email: webix.rules.isEmail,
+              password: webix.rules.isNotEmpty,
+              salaryPerDay: webix.rules.isNumber,
+              role: webix.rules.isNotEmpty,
+              branchId: webix.rules.isNotEmpty,
+            },
+          },
+        });
+
+        await loadEmployees();
+        
+        const branchFilterCombo = $$("branchFilter");
+        const branchOptions = [
+          { id: "all", value: "All Branches" },
+          ...branches.map((branch) => ({ id: branch._id, value: branch.name }))
+        ];
+        branchFilterCombo.define("options", branchOptions);
+        branchFilterCombo.refresh();
+      });
+    </script>
+  </body>
+</html>

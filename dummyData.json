@@ -1,0 +1,118 @@
+{
+  "_id": "EMP_6320251114190403",
+  "name": "Jojo",
+  "email": "jose@aventra.com",
+  "role": "owner",
+  "salaryPerDay": 30000.0,
+  "annualLeaveBalance": 13,
+  "branchId": "",
+  "status": "active",
+  "createdAt": "2025-11-24T15:47:00.142000",
+  "branch": {
+    "status": true,
+    "message": "Data fetched successfully",
+    "data": [
+      {
+        "_id": "STR_7520251114203713",
+        "name": "Aventra Salatiga",
+        "address": "Jalan Osamaliki No.100",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [110.50241088552868, -7.324738730101273]
+        },
+        "createdAt": "Fri, 14 Nov 2025 13:37:13 GMT",
+        "updatedAt": "Fri, 14 Nov 2025 13:37:28 GMT"
+      },
+      {
+        "_id": "STR_3920251115133737",
+        "name": "Store 1",
+        "address": "Solo",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [110.8243272, -7.5754887]
+        },
+        "createdAt": "2025-11-15T06:37:37.107000"
+      },
+      {
+        "_id": "STR_3320251115133757",
+        "name": "Store 2",
+        "address": "Solo",
+        "status": "inactive",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [110.82403564374546, -7.570092472710113]
+        },
+        "createdAt": "2025-11-15T06:37:57.499000"
+      },
+      {
+        "_id": "STR_2220251115083551",
+        "name": "Store 3",
+        "address": "Jln. Kartini",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [110.49904203395273, -7.3245046227824275]
+        },
+        "createdAt": "Sat, 15 Nov 2025 08:35:51 GMT",
+        "updatedAt": "Sat, 15 Nov 2025 09:16:49 GMT"
+      },
+      {
+        "_id": "STR_8420251124222829",
+        "name": "Store Jambewangi",
+        "address": "Jln.Jambewangi No.11",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [110.49340832223609, -7.311950917694072]
+        },
+        "createdAt": "2025-11-24T15:28:29.652000"
+      },
+      {
+        "_id": "STR_7620251124154502",
+        "name": "Tangsel",
+        "address": "Perum bona",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [106.6409313, -6.2130061]
+        },
+        "createdAt": "2025-11-24T15:45:02.548000"
+      },
+      {
+        "_id": "STR_9320251125161817",
+        "name": "Toko B",
+        "address": "Jalan diponegoro No 11",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [110.5008015630665, -7.320013976274863]
+        },
+        "createdAt": "Tue, 25 Nov 2025 16:18:17 GMT",
+        "updatedAt": "2025-11-25T16:18:52.372000"
+      },
+      {
+        "_id": "STR_9320251125161817",
+        "name": "Store object",
+        "address": "Address",
+        "status": "active",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [0, 0]
+        },
+        "createdAt": "2025-11-27T00:00:00.000000"
+      },
+      {
+        "Date": "Thu, 27 Nov 2025 00:00:00 GMT",
+        "clockIn": "20:38:22",
+        "clockOut": null,
+        "shift": "Night",
+        "shiftEndTime": "23:00:00",
+        "shiftStartTime": "15:00:00",
+        "status": "late",
+        "attendanceId": "SHF_2025-11-27_9458"
+      }
+    ]
+  }
+}

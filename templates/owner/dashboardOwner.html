@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omise - Dashboard</title>
+    <script
+      type="text/javascript"
+      src="https://cdn.webix.com/edge/webix.js"></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/main.css') }}" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+      rel="stylesheet" />
+    <script src="../../static/js/sideNavbar.js"></script>
+    <script src="../../static/js/dashboard.js"></script>
+    <script src="../../static/js/getLocation.js"></script>
+
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(
+          to right,
+          var(--arunika-gold),
+          var(--sunrise-red)
+        );
+      }
+
+      .card-hover {
+        transition: all 0.3s ease;
+      }
+
+      .card-hover:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+
+      #map-stores {
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      }
+
+      .section-card {
+        background: white;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      }
+
+      .detail-link {
+        position: relative;
+        overflow: hidden;
+      }
+
+      .detail-link::after {
+        content: '→';
+        margin-left: 4px;
+        transition: margin-left 0.3s ease;
+      }
+
+      .detail-link:hover::after {
+        margin-left: 8px;
+      }
+
+      .hero-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+    </style>
+  </head>
+
+  <body class="flex h-screen bg-gray-50">
+    <aside
+      class="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full shadow-lg z-20"
+      id="sidebar-container"></aside>
+
+    <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+      <header
+        class="bg-white shadow-sm p-6 flex justify-between items-center border-b border-gray-200"
+        id="top-nav"></header>
+
+      <main class="flex-1 overflow-y-auto bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+        <section class="mb-12">
+          <h1 class="text-4xl font-bold text-gray-900 mb-3">
+            Welcome back, 
+            <span class="text-4xl font-bold text-gray-900" id="current-user-name">-</span> 
+            <span class="inline-block animate-wave">👋</span>
+          </h1>
+          <p class="text-gray-600 text-base">
+            Here's a quick overview of your employees & branches.
+          </p>
+        </section>
+
+        <section
+          id="dashboard-content"
+          class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+        </section>
+
+        <section class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          <div class="section-card card-hover">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <span class="text-2xl">👥</span>
+                List Employee
+              </h3>
+              <a 
+                href="/employee-manage" 
+                class="detail-link text-sm font-medium text-indigo-600 hover:text-indigo-800 transition-colors">
+                View All
+              </a>
+            </div>
+            <div id="employee-list" class="w-full"></div>
+          </div>
+
+          <div class="section-card card-hover">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-xl font-semibold text-gray-800 flex items-center gap-2">
+                <span class="text-2xl">🏪</span>
+                List Store
+              </h3>
+              <a 
+                href="/owner/branch-manage" 
+                class="detail-link text-sm font-medium text-[var(--primary-text)] hover:text-indigo-800 transition-colors">
+                View All
+              </a>
+            </div>
+            <div id="branch-list" class="w-full"></div>
+          </div>
+
+          <div class="section-card card-hover flex flex-col">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
+              <span class="text-2xl">📍</span>
+              Store Locations
+            </h3>
+            <div id="map-stores" class="flex-1 min-h-[300px] rounded-xl"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        topNav();
+        navbarSide();
+        renderDashboard();
+        renderMap();
+
+        // Employee List Table
+        webix.ui({
+          container: "employee-list",
+          id: "employee-list",
+          view: "datatable",
+          height: 300,
+          rowHeight: 48,
+          css: "webix_data_border webix_header_border",
+          hover: "webix_hover",
+          select: "row",
+          columns: [
+            {
+              id: "name",
+              header: { text: "Employee Name", css: "text-center" },
+              template: (obj) => `
+                <div class="flex items-center gap-3 px-2">
+                  <div class="w-8 h-8 rounded-full gradient-btn flex items-center justify-center text-white font-semibold text-sm">
+                    ${obj.name ? obj.name.charAt(0).toUpperCase() : '?'}
+                  </div>
+                  <span class="font-medium text-gray-700">${obj.name || '-'}</span>
+                </div>
+              `,
+              fillspace: 2
+            },
+            {
+              id: "branch",
+              header: { text: "Branch", css: "text-center" },
+              fillspace: 1,
+              css: "text-center",
+              template: (obj) => `
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[var(--arunika-gold)] text-white">
+                  ${obj.branch?.name || '-'}
+                </span>
+              `
+            }
+          ]
+        });
+
+        webix.ui({
+          container: "branch-list",
+          id: "branch-list",
+          view: "datatable",
+          autofill: true,
+          height: 300,
+          rowHeight: 48,
+          css: "webix_data_border webix_header_border",
+          hover: "webix_hover",
+          columns: [
+            {
+              id: "name",
+              header: { text: "Store Name", css: "text-center" },
+              template: (obj) => `
+                <div class="flex items-center gap-3 px-2">
+                  <div class="w-8 h-8 rounded-lg gradient-btn flex items-center justify-center text-white text-lg">
+                    🏪
+                  </div>
+                  <span class="font-medium text-gray-700">${obj.name || '-'}</span>
+                </div>
+              `,
+              fillspace: 1
+            },
+            {
+              id: "address",
+              header: { text: "Location", css: "text-center" },
+              fillspace: 2,
+              css: "text-left",
+              template: (obj) => `
+                <span class="flex items-center gap-2 py-2 text-sm text-gray-600 truncate block px-2">
+                  📍 ${obj.address || '-'}
+                </span>
+              `
+            }
+          ]
+        });
+      });
+    </script>
+  </body>
+</html>

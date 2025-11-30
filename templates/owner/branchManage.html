@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omise - Branch Manage</title>
+
+    <!-- libs -->
+    <script src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <!-- fonts & styles (Flask template helper kept) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css"
+    />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+
+    <!-- optional external app scripts (if you have them keep these) -->
+    <script src="../../static/js/sideNavbar.js"></script>
+    <script src="../../static/js/getLocation.js"></script>
+    <script src="../../static/js/store.js"></script>
+
+    <style>
+      #map {
+        height: 300px;
+        width: 100%;
+        border-radius: 6px;
+      }
+      .webix_view {
+        box-sizing: border-box;
+      }
+    </style>
+  </head>
+
+  <body class="flex h-screen">
+    <aside
+      class="w-64 bg-white border-r border-gray-200 flex flex-col fixed h-full shadow-sm z-20"
+      id="sidebar-container"
+    ></aside>
+
+    <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+      <header
+        class="bg-white shadow-sm p-4 flex justify-between items-center border-b border-gray-200"
+        id="top-nav"
+      ></header>
+
+      <main class="flex-1 overflow-y-auto h-fit p-6 bg-gray-50">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6 overflow-y-auto" id="content"></div>
+      </main>
+    </div>
+
+    <script>
+      let map = null;
+      let marker = null;
+      let selectedCoordinates = [];
+
+      const applyFilters = () => {
+        const storeName = $$("storeSearch").getValue().toLowerCase(); //ambil value dari fields input store name
+        $$("storeTable").filter(
+          function (obj) {
+            const name = (obj.name || "").toLowerCase();
+            return name.indexOf(storeName) !== -1;
+          },
+          true
+        );
+      };
+
+      document.addEventListener("DOMContentLoaded", () => {
+        renderUI();
+        loadStores();
+        topNav();
+        navbarSide(pagesAdmin);
+      });
+
+      function renderUI() {
+        webix.ui({
+          container: "content",
+          rows: [
+            {
+              view: "toolbar",
+              height: 50,
+              cols: [
+                { view: "label", label: "📋 Store List" },
+                {},
+                {
+                  id: "addStoreBtn",
+                  width: 150,
+                  borderless: true,
+                  template: `
+                    <div class="addStoreBtn flex items-center justify-end gap-2 w-fit bg-green-500 hover:bg-green-600 transition duration-150 text-white px-3 py-1.5 rounded-lg">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                      <span class="text-sm font-medium">Add Store</span>
+                    </div>
+                  `,
+                  onClick: {
+                    addStoreBtn: function () {
+                      $$("storeForm").clear();
+                      selectedCoordinates = [];
+                      $$("storeWindow").show();
+                      $$("storeForm").clearValidation();
+                    },
+                  },
+                },
+                {cols: [
+                  {
+                    view: "text",
+                    id: "storeSearch",
+                    placeholder: "Search stores",
+                    on: {
+                      onEnter: function () {
+                        applyFilters();
+                      },
+                    },
+                  },
+                ]}
+              ],
+            },
+            {
+              view: "datatable",
+              id: "storeTable",
+              select: "row",
+              autoheight: true,
+              rowHeight: 50,
+              css: "bg-white rounded-xl shadow-sm border border-slate-200 text-center",
+              hover: "bg-slate-50",
+              columns: [
+                { id: "_id", header: "ID", fillspace: true },
+                { id: "name", header: "Name", fillspace: true },
+                { id: "address", header: "Address", fillspace: true },
+                {
+                  id: "status",
+                  header: "Status",
+                  fillspace: true,
+                  css: "text-start text-sm",
+                  template: function (obj) {
+                    const color = obj.status === "active" ? "text-green-600" : "text-red-600";
+                    return `<span class="${color} font-semibold">${obj.status || "-"}</span>`;
+                  },
+                },
+                {
+                  id: "actions",
+                  header: "Actions",
+                  css: "text-start text-sm",
+                  width: 350,
+                  template: function (obj) {
+                    const editBtn = `<button class="editBtn px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-500 hover:text-white">✏️ edit</button>`;
+                    const actionBtn =
+                      obj.status === "active"
+                        ? `<button class="nonActiveBtn px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-red-500 hover:bg-red-600">🗑️ close</button>`
+                        : `<button class="activeBtn px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-green-500 hover:bg-green-600">🟢 activate</button>`;
+                    return `<div class="flex justify-center items-center gap-3 h-full">${editBtn}${actionBtn}</div>`;
+                  },
+                },
+              ],
+              onClick: {
+                nonActiveBtn: async function (e, id) {
+                  const item = this.getItem(id);
+                    webix.confirm({
+                      title : "Confirm Non-Activate Store",
+                      text: `Want to non-activate <b> ${item.name} </b> store`,
+                      callback : async function (result) {
+                        try {
+                          if(result){
+                            const res = await axios.put(`/api/branch/non-active/${item._id}`);
+                            if (res?.data?.status) {
+                              webix.message("✅ Store non-activated!");
+                              loadStores();
+                            } else {
+                              webix.alert("❌ Failed to non-activate (server).");
+                            }
+                          }
+                        }catch(error){
+                          console.log(error);
+                          webix.alert("❌ Failed to non-activate.");
+                        }
+                      }
+                    })
+                },
+                activeBtn: async function (e, id) {
+                  const item = this.getItem(id);
+                  try {
+                    const res = await axios.put(`/api/branch/active/${item._id}`);
+                    if (res?.data?.status) {
+                      webix.message("✅ Store activated!");
+                      loadStores();
+                    } else {
+                      webix.alert("❌ Failed to activate (server).");
+                    }
+                  } catch (err) {
+                    webix.alert("❌ Failed to activate (network).");
+                  }
+                },
+                editBtn: async function (e, id) {
+                  const item = this.getItem(id);
+                  $$("storeForm").setValues(item);
+                  $$("storeForm").clearValidation();
+                  try {
+                    const res = await storeById(item._id);
+                    const coords = res?.data?.geometry?.coordinates;
+                    if (Array.isArray(coords) && coords.length >= 2) {
+                      selectedCoordinates = [coords[0], coords[1]];
+                    } else {
+                      selectedCoordinates = [];
+                    }
+                  } catch (err) {
+                    selectedCoordinates = [];
+                  }
+                  $$("storeWindow").show();
+                },
+              },
+            },
+          ],
+        });
+
+        // store form window
+        webix.ui({
+          view: "window",
+          id: "storeWindow",
+          head: "Store Form",
+          position: "center",
+          modal: true,
+          width: 600,
+          body: {
+            view: "form",
+            id: "storeForm",
+            elements: [
+              { view: "text", name: "_id", hidden: true },
+              { view: "text", name: "name", label: "Name", required: true },
+              { view: "text", name: "address", label: "Address", required: true },
+              {
+                view: "template",
+                template: `<div class="w-full h-full flex flex-col items-start justify-center">
+                  <p class="text-sm font-medium">Store Location</p>
+                  <div id="map"></div>
+                </div>`,
+                height: 320,
+                borderless: true,
+              },
+              {
+                margin: 10,
+                cols: [
+                  {},
+                  {
+                    view: "button",
+                    value: "Cancel",
+                    css: "webix_danger",
+                    click: function () {
+                      $$("storeWindow").hide();
+                      selectedCoordinates = [];
+                    },
+                  },
+                  {
+                    view: "button",
+                    value: "Save",
+                    css: "webix_primary",
+                    click: async function () {
+                      const form = $$("storeForm");
+                      if (!form.validate()) return;
+                      const values = form.getValues();
+
+                      if (!Array.isArray(selectedCoordinates) || selectedCoordinates.length < 2) {
+                        try {
+                          const loc = await getCurrentLocation();
+                          selectedCoordinates = [loc.longitude, loc.latitude];
+                        } catch (err) {
+                          selectedCoordinates = [110.50179290614325, -7.325555980425633];
+                        }
+                      }
+
+                      values.geometry = { type: "Point", coordinates: selectedCoordinates };
+
+                      try {
+                        if (values._id) {
+                          const res = await axios.put(`/api/branch/update/${values._id}`, values);
+                          if (res?.status === 200 && (res?.data?.status ?? true)) {
+                            webix.message("✅ Updated successfully!");
+                          } else {
+                            webix.alert("❌ Failed to update store!");
+                          }
+                        } else {
+                          const res = await axios.post("/api/branch/create", values);
+                          if (res?.data?.status === false) {
+                            const allErrors = Object.entries(res?.data?.errors || {})
+                              .map(([key, value]) => `${key}: ${Array.isArray(value) ? value.join(", ") : value}`)
+                              .join("<br>");
+                            webix.message({ type: "error", text: allErrors || "Validation failed", expire: 5000 });
+                          } else {
+                            webix.message("✅ Added successfully!");
+                          }
+                        }
+
+                        $$("storeWindow").hide();
+                        loadStores();
+                      } catch (err) {
+                        if (err?.response?.data?.errors) {
+                          Object.entries(err.response.data.errors).forEach(([key, value]) => {
+                            form.markInvalid(key, Array.isArray(value) ? value.join(", ") : value);
+                          });
+                        } else {
+                          webix.message({
+                            type: "error",
+                            text: err?.response?.data?.message || "Failed to save employee!",
+                            expire: 5000,
+                          });
+                        }
+                      }
+                    },
+                  },
+                ],
+              },
+            ],
+            rules: {
+              name: webix.rules.isNotEmpty,
+              address: webix.rules.isNotEmpty,
+            },
+          },
+          on: {
+            onShow: function () {
+              setTimeout(renderMap, 200);
+            },
+          },
+        });
+      }
+
+      async function renderMap() {
+        if (!Array.isArray(selectedCoordinates) || selectedCoordinates.length < 2) {
+          try {
+            const loc = await getCurrentLocation();
+            selectedCoordinates = [loc.longitude, loc.latitude];
+            console.log("Using current location:", selectedCoordinates);
+          } catch (err) {
+            selectedCoordinates = [110.50179290614325, -7.325555980425633];
+            console.warn("Using default location (Salatiga).");
+          }
+        }
+
+        const mapContainer = document.getElementById("map");
+        if (!mapContainer) return;
+        if (map) {
+          try {
+            map.off();
+            map.remove();
+            map = null;
+            marker = null;
+          } catch (e) {
+            console.warn("Error removing previous map:", e);
+          }
+        }
+
+        const leafletCoords = [selectedCoordinates[1], selectedCoordinates[0]]; // [lat, lng]
+
+        map = L.map("map", { attributionControl: true }).setView(leafletCoords, 13);
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution: '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a>',
+        }).addTo(map);
+
+        marker = L.marker(leafletCoords, { draggable: false }).addTo(map);
+
+        map.on("click", function (e) {
+          const { lat, lng } = e.latlng;
+          selectedCoordinates = [lng, lat];
+          marker.setLatLng([lat, lng]);
+          webix.message({ text: "✅ Location selected!", type: "success", expire: 1500 });
+        });
+      }
+    </script>
+  </body>
+</html>

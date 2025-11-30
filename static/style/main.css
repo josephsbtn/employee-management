@@ -1,0 +1,57 @@
+:root {
+  --arunika-black: #1a1a1a;
+  --smoky-gray: #2d2d2d;
+  --warm-gray: #cccccc;
+  --arunika-gold: #e7b65e;
+  --sunrise-red: #c0392b;
+  --morning-blue: #4da3ff;
+  --soft-green: #6ebf74;
+  --calm-blue: #4682b4;
+  --pure-white: #ffffff;
+
+  --bg-light: #faf9f7;
+  --card-bg: #ffffff;
+
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+
+  --shadow-soft: 0 4px 8px rgba(0, 0, 0, 0.05);
+  --gradient: linear-gradient(
+    to right,
+    var(--arunika-gold),
+    var(--sunrise-red)
+  );
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  background-color: var(--bg-light);
+  color: var(--text-primary);
+}
+
+.gradient-btn {
+  background-image: var(--gradient);
+  color: var(--pure-white);
+  transition: opacity 0.3s ease;
+}
+
+.gradient-btn:hover {
+  opacity: 0.9;
+}

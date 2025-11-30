@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Omise - Dashboard</title>
+    <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap" rel="stylesheet" />
+    <script src="../../static/js/sideNavbar.js"></script>
+    <script src="../../static/js/getLocation.js"></script>
+    <script src="../../static/js/employee.js"></script>
+
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(to right, var(--arunika-gold), var(--sunrise-red));  
+      }
+      
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        transition: opacity 0.3s ease;
+      }
+      
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+      }
+      
+      @media (max-width: 768px) {
+        #sidebar-container {
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+          z-index: 50;
+        }
+        
+        #sidebar-container.active {
+          transform: translateX(0);
+        }
+        
+        .main-content {
+          margin-left: 0 !important;
+        }
+      }
+      
+      .hamburger-line {
+        transition: all 0.3s ease;
+      }
+      
+      .hamburger.active .line1 {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+      
+      .hamburger.active .line2 {
+        opacity: 0;
+      }
+      
+      .hamburger.active .line3 {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+    </style>
+  </head>
+
+  <body class="flex h-screen overflow-hidden">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside
+      class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm"
+      id="sidebar-container"
+    ></aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden main-content md:ml-64">
+      <header
+        class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
+      >
+        <button
+          class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          id="hamburgerBtn"
+        >
+          <div class="hamburger w-6 h-5 flex flex-col justify-between">
+            <span class="hamburger-line line1 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line2 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line3 w-full h-0.5 bg-gray-700 rounded"></span>
+          </div>
+        </button>
+
+        <div class="flex-1" id="top-nav"></div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--bg-light)]">
+        <div class="bg-white p-4 md:p-6 rounded-xl shadow mb-4 md:mb-6">
+          <h3 class="text-base md:text-lg font-semibold text-[var(--text-primary)] mb-4">
+            Today's Attendance
+          </h3>
+          
+          <div class="flex flex-col gap-4">
+            <div class="flex flex-col gap-2">
+              <p class="text-xs md:text-sm text-gray-500">Current Shift:</p>
+              <div class="flex flex-wrap gap-2 md:gap-4 items-center" id="currentShiftContainer"></div>
+              
+              <div class="space-y-1">
+                <p class="text-xs md:text-sm font-semibold text-[var(--text-primary)]">
+                  Clock In Time: 
+                  <span id="clockInTime" class="text-[var(--calm-blue)]">--:--</span>
+                </p>
+                <p class="text-xs md:text-sm font-semibold text-[var(--text-primary)]">
+                  Clock Out Time: 
+                  <span id="clockOutTime" class="text-gray-400">--:--</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 md:gap-4 mt-2" id="clockInOutContainer">
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-white p-4 md:p-6 rounded-xl shadow">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+            <h3 class="text-base md:text-lg font-semibold text-[var(--text-primary)]">
+              Your Shift Schedule
+            </h3>
+            <input
+              type="month"
+              id="monthPicker"
+              class="border border-gray-300 rounded-lg px-3 py-2 text-sm md:text-base w-full sm:w-auto"
+            />
+          </div>
+
+          <div
+            id="scheduleList"
+            class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4"
+          >
+          </div>
+
+          <div 
+            class="w-full mt-4 p-2 rounded-lg overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4" 
+            id="shiftList"
+          >
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <script>
+      const hamburgerBtn = document.getElementById("hamburgerBtn") || "";
+const sidebar = document.getElementById("sidebar-container") || "";
+const sidebarOverlay = document.getElementById("sidebarOverlay") || "";
+
+function toggleSidebar() {
+  sidebar.classList.toggle("active");
+  sidebarOverlay.classList.toggle("active");
+  hamburgerBtn.querySelector(".hamburger").classList.toggle("active");
+
+  if (sidebar.classList.contains("active")) {
+    document.body.style.overflow = "hidden";
+  } else {
+    document.body.style.overflow = "";
+  }
+}
+
+hamburgerBtn.addEventListener("click", toggleSidebar);
+
+sidebarOverlay.addEventListener("click", toggleSidebar);
+
+sidebar.addEventListener("click", (e) => {
+  if (e.target.tagName === "A" && window.innerWidth < 768) {
+    toggleSidebar();
+  }
+});
+
+window.addEventListener("resize", () => {
+  if (window.innerWidth >= 768 && sidebar.classList.contains("active")) {
+    toggleSidebar();
+  }
+});
+
+    </script>
+  </body>
+</html>

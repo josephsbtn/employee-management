@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aventra - Annual Request</title>
+    <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
+    <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="../../static/js/sideNavbar.js"></script>
+    <script src="../../static/js/annual-employee.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style/main.css') }}" />
+
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(to right, var(--arunika-gold), var(--sunrise-red));  
+      }
+      
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        transition: opacity 0.3s ease;
+      }
+      
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+      }
+      
+      @media (max-width: 768px) {
+        #sidebar-container {
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+          z-index: 50;
+        }
+        
+        #sidebar-container.active {
+          transform: translateX(0);
+        }
+        
+        .main-content {
+          margin-left: 0 !important;
+        }
+      }
+      
+      .hamburger-line {
+        transition: all 0.3s ease;
+      }
+      
+      .hamburger.active .line1 {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+      
+      .hamburger.active .line2 {
+        opacity: 0;
+      }
+      
+      .hamburger.active .line3 {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+    </style>
+  </head>
+
+  <body class="flex h-screen overflow-hidden">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <aside
+      class="w-64 bg-white border-r border-gray-300 flex flex-col fixed h-full shadow-sm"
+      id="sidebar-container"
+    ></aside>
+
+    <div class="flex-1 flex flex-col overflow-hidden main-content md:ml-64">
+      <header
+        class="bg-white shadow-sm p-4 flex justify-between items-center border-b border-gray-300"
+      >
+        <button
+          class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          id="hamburgerBtn"
+        >
+          <div class="hamburger w-6 h-5 flex flex-col justify-between">
+            <span class="hamburger-line line1 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line2 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line3 w-full h-0.5 bg-gray-700 rounded"></span>
+          </div>
+        </button>
+
+        <div class="flex-1" id="top-nav"></div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-gray-100">
+        <div id="content" style="height: 100%;"></div>
+        <div id="detailRequest" class="hidden w-full bg-black bg-opacity-50 fixed inset-0 flex items-center justify-center absolute z-50"></div>
+      </main>
+    </div>
+
+    <script>
+      let isRequested = false;
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar-container");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+      function toggleSidebar() {
+        sidebar.classList.toggle("active");
+        sidebarOverlay.classList.toggle("active");
+        hamburgerBtn.querySelector(".hamburger").classList.toggle("active");
+
+        if (sidebar.classList.contains("active")) {
+          document.body.style.overflow = "hidden";
+        } else {
+          document.body.style.overflow = "";
+        }
+      }
+
+      hamburgerBtn.addEventListener("click", toggleSidebar);
+      sidebarOverlay.addEventListener("click", toggleSidebar);
+
+      sidebar.addEventListener("click", (e) => {
+        if (e.target.tagName === "A" && window.innerWidth < 768) {
+          toggleSidebar();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth >= 768 && sidebar.classList.contains("active")) {
+          toggleSidebar();
+        }
+      });
+
+      let currentFilters = {
+        status: "all",
+        date: null
+      };
+
+      const fetchListRequest = async () => {
+        try {
+          const res = await axios.get("/api/annualRequest/list-employee");
+          const requests = res.data.data || [];
+          console.log("requests", requests);
+          const sorting = requests.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          $$("requestTable").clearAll();
+          $$("requestTable").parse(sorting);
+          
+          applyAllFilters();
+
+          console.log("✅ Annual Leave Requests fetched:", requests);
+        } catch (error) {
+          console.error("❌ Failed to fetch annual leave requests:", error);
+          webix.message({ type: "error", text: "Failed to fetch annual leave requests." });
+        }
+      };
+
+      const applyAllFilters = () => {
+        $$("requestTable").filter(function(obj) {
+          let statusMatch = true;
+          let monthMatch = true;
+
+          if (currentFilters.status !== "all") {
+            statusMatch = obj.status === currentFilters.status;
+          }
+
+          if (currentFilters.date) {
+            const requestDate = new Date(obj.createdAt);
+            const filterDate = new Date(currentFilters.date);
+            
+            monthMatch = 
+              requestDate.getMonth() === filterDate.getMonth() && 
+              requestDate.getFullYear() === filterDate.getFullYear();
+          }
+
+          return statusMatch && monthMatch;
+        });
+      };
+
+      const applyFilterStatus = (filter) => {
+        currentFilters.status = filter;
+        applyAllFilters();
+      };
+
+      const applyFilterDate = (date) => {
+        currentFilters.date = date;
+        applyAllFilters();
+      };
+
+      const clearDateFilter = () => {
+        currentFilters.date = null;
+        $$("monthPicker").setValue("");
+        applyAllFilters();
+      };
+
+      const submitHandler = async (data, file) => {
+        try {
+          const formData = new FormData();
+          if (isRequested) {
+            webix.alert("Please wait, your request is being processed.");
+            return;
+          }
+          isRequested = true;
+          
+          if (file) {
+            formData.append("attachment", file);
+            formData.append("payload", JSON.stringify(data));
+            
+            const response = await axios.post("/api/annualRequest/request", formData, {
+              headers: {
+                'Content-Type': 'multipart/form-data'
+              }
+            });
+            
+            webix.message("Request submitted successfully!");
+            $$("requestWindow").hide();
+            $$("requestForm").clear();
+            $$("fileUploader").files.clearAll();
+            await fetchListRequest();
+            isRequested = false;
+            return {
+              type: "success",
+              text: "Request submitted successfully!"
+            };
+          } else {
+            const response = await axios.post("/api/annualRequest/request", data, {
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            if (response.data.status === true) {
+              webix.message("Request submitted successfully!");
+              $$("requestWindow").hide();
+              $$("requestForm").clear();
+              await fetchListRequest();
+              isRequested = false;
+              return {
+                type: "success",
+                text: "Request submitted successfully!"
+              };
+            }
+            if (response?.data?.errors) {
+              Object.entries(err.response.data.errors).forEach(([key, value]) => {
+                $$("requestForm").markInvalid(key, Array.isArray(value) ? value.join(", ") : value);
+              });
+            } else {
+              webix.alert({
+                title: "Something went wrong!",
+                type: "alert-error",
+                text: response?.data?.message || "Failed to save request!",
+              });
+            }
+
+          }
+        } catch (error) {
+          isRequested = false;
+          if (err?.response?.data?.errors) {
+              Object.entries(err.response.data.errors).forEach(([key, value]) => {
+                $$("requestForm").markInvalid(key, Array.isArray(value) ? value.join(", ") : value);
+              });
+            } else {
+              webix.alert({
+                type: "error",
+                text: err?.response?.data?.message || "Failed to save request!",
+                expire: 5000,
+              });
+            }
+        }
+      };
+
+      const cancelHandler = async (id) => {
+        try {
+          if (isRequested) {
+            webix.alert("Please wait, your request is being processed.");
+            return;
+          }
+          isRequested = true;
+          const response = await axios.put(`/api/annualRequest/cancel/${id}`);
+          if (response.status === 200) {
+            webix.message("Request cancelled successfully!");
+            await fetchListRequest();
+            isRequested = false;
+            return {
+              type: "success",
+              text: "Request cancelled successfully!"
+            };
+          }
+        } catch (error) {
+          isRequested = false;
+          console.error("❌ Failed to cancel request:", error);
+          return webix.message({ type: "error", text: "Failed to cancel request" });
+        }
+      };
+
+      window.cancelHandler = cancelHandler;
+
+      document.addEventListener("DOMContentLoaded", async () => {
+        topNav();
+        navbarSide();
+        
+        webix.ui({
+          view: "window",
+          id: "requestWindow",
+          width: 700,
+          position: "center",
+          modal: true,
+          head: "Annual Leave Request",
+          body: {
+            view: "form",
+            id: "requestForm",
+            elements: [
+              {
+                view: "combo",
+                name: "type",
+                label: "Type",
+                required: true,
+                options: [
+                  { id: "sick", value: "Sick" },
+                  { id: "annual", value: "Annual" },
+                  { id: "permission", value: "Permission" },
+                ]
+              },
+              {
+                view: "datepicker",
+                name: "startDate",
+                label: "From",
+                required: true,
+                format: "%Y-%m-%d"
+              },
+              {
+                view: "datepicker",
+                name: "endDate",
+                label: "To",
+                required: true,
+                format: "%Y-%m-%d"
+              },
+              {
+                view: "textarea",
+                name: "reason",
+                label: "Reason",
+                required: true,
+                height: 100
+              },
+              {
+                view: "uploader",
+                id: "fileUploader",
+                name: "attachment",
+                label: "Attachment",
+                required: false,
+                upload: "/api/annualRequest/request",
+                autosend: false,
+                accept: "image/*,application/pdf",
+                multiple: false,
+                link: "fileList"
+              },
+              {
+                view: "list",
+                id: "fileList",
+                type: "uploader",
+                autoheight: true,
+                borderless: true
+              },
+              {
+                margin: 10,
+                cols: [
+                  {},
+                  {
+                    view: "button",
+                    value: "Cancel",
+                    width: 100,
+                    click: function() {
+                      $$("requestWindow").hide();
+                      $$("requestForm").clear();
+                      $$("fileUploader").files.clearAll();
+                    }
+                  },
+                  {
+                    view: "button",
+                    value: "Submit",
+                    width: 100,
+                    css: "webix_primary",
+                    click: async function() {
+                      if ($$("requestForm").validate()) {
+                        const values = $$("requestForm").getValues();
+                        const uploader = $$("fileUploader");
+
+                        const formattedValues = {
+                          type: values.type,
+                          startDate: webix.Date.dateToStr("%Y-%m-%d")(values.startDate),
+                          endDate: webix.Date.dateToStr("%Y-%m-%d")(values.endDate),
+                          reason: values.reason
+                        };
+
+                        let file = null;
+                        if (uploader.files.count() > 0) {
+                          const fileId = uploader.files.getFirstId();
+                          const fileObj = uploader.files.getItem(fileId);
+                          file = fileObj.file || null;
+                        }
+                        
+                        await submitHandler(formattedValues, file);
+                      } else {
+                        webix.message({ type: "error", text: "Please fill in all required fields" });
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        });
+        
+        webix.ui({
+          container: "content",
+          rows: [
+            {
+              view: "toolbar",
+              height: 50,
+              cols: [
+                { view: "label", label: "📋 Annual Leave Request" },
+                {},
+                {
+                  view: "template",
+                  id: "requestBtn",
+                  width: 180,
+                  borderless: true,
+                  template: `
+                    <a class="requestBtn flex items-center justify-end gap-2 w-fit bg-green-500 hover:bg-green-600 transition duration-150 text-white px-3 py-1.5 rounded-lg cursor-pointer">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                      </svg>
+                      <span class="text-xs font-medium">Annual Request</span>
+                    </a>`,
+                  onClick: {
+                    requestBtn: function() {
+                      $$("requestWindow").show();
+                    }
+                  }
+                }
+              ]
+            },
+            {
+              view: "toolbar",
+              height: 50,
+              cols: [
+                {
+                  view: "segmented",
+                  id: "statusFilter",
+                  width: 450,
+                  value: "all",
+                  options: [
+                    { id: "all", value: "All" },
+                    { id: "pending", value: "Pending" },
+                    { id: "approved", value: "Approved" },
+                    { id: "rejected", value: "Rejected" },
+                    { id: "canceled", value: "Canceled" }
+                  ],
+                  on: {
+                    onChange: function(newVal) {
+                      applyFilterStatus(newVal);
+                    }
+                  }
+                },
+                {},
+                {
+                  view: "datepicker",
+                  id: "monthPicker",
+                  label: "Filter by Month",
+                  width: 250,
+                  type: "month",
+                  format: "%F %Y",
+                  on: {
+                    onChange: function() {
+                      const selectedDate = $$("monthPicker").getValue();
+                      if (selectedDate) {
+                        applyFilterDate(selectedDate);
+                      }
+                    }
+                  }
+                },
+                {
+                  view: "button",
+                  value: "Clear Date",
+                  width: 100,
+                  click: function() {
+                    clearDateFilter();
+                  }
+                }
+              ]
+            },
+            {
+              view: "datatable",
+              id: "requestTable",
+              autoConfig: true,
+              autoheight: true,
+              columns: [
+                { 
+                  id: "type", 
+                  header: [{ text: "Type", css: "text-center" }], 
+                  fillspace: true, 
+                  css: "text-center text-sm",
+                  template: function(obj) {
+                    const formatted = obj.type.charAt(0).toUpperCase() + obj.type.slice(1);
+                    const typeClass =
+                      obj.type === "annual"
+                        ? "bg-blue-100 text-blue-700"
+                        : obj.type === "sick"
+                        ? "bg-orange-100 text-orange-700"
+                        : obj.type === "permission"
+                        ? "bg-sky-100 text-sky-700"
+                        : "bg-gray-200 text-gray-700";
+                    return `<span class="${typeClass} px-2 py-1 rounded text-xs font-medium">${formatted}</span>`;
+                  }
+                },
+                { 
+                  id: "startDate", 
+                  header: [{ text: "From", css: "text-center" }], 
+                  fillspace: true, 
+                  css: "text-center text-sm",
+                  template: (obj) => new Date(obj.startDate).toLocaleDateString("id-ID")  
+                },
+                { 
+                  id: "endDate", 
+                  header: [{ text: "To", css: "text-center" }], 
+                  fillspace: true, 
+                  css: "text-center text-sm",
+                  template: (obj) => new Date(obj.endDate).toLocaleDateString("id-ID")
+                },
+                { 
+                  id: "days", 
+                  header: [{ text: "Days", css: "text-center" }], 
+                  width: 80,
+                  css: "text-center text-sm" 
+                },
+                { 
+                  id: "reason", 
+                  header: [{ text: "Reason", css: "text-center" }], 
+                  fillspace: true, 
+                  css: "text-center text-sm" 
+                },
+                { 
+                  id: "status", 
+                  header: [{ text: "Status", css: "text-center" }], 
+                  fillspace: true, 
+                  css: "text-center text-sm",
+                  template: function (obj) {
+                    if (obj.status === "pending") {
+                      return `<span class="text-semibold text-white bg-yellow-500 px-2 py-1 rounded-lg text-xs">${obj.status}</span>`;
+                    } else if (obj.status === "approved") {
+                      return `<span class="text-semibold text-white bg-green-500 px-2 py-1 rounded-lg text-xs">${obj.status}</span>`;
+                    } else if (obj.status === "rejected") {
+                      return `<span class="text-semibold text-white bg-red-500 px-2 py-1 rounded-lg text-xs">${obj.status}</span>`;
+                    } else {
+                      return `<span class="text-semibold text-white bg-gray-500 px-2 py-1 rounded-lg text-xs">${obj.status}</span>`;
+                    }
+                  }
+                },
+                {
+                  id: "requestDate",
+                  header: [{ text: "Request Date", css: "text-center" }],
+                  fillspace: true,
+                  css: "text-center text-sm",
+                  template: (obj) => new Date(obj.createdAt).toLocaleDateString("id-ID")
+                },
+                { 
+                  id: "actions", 
+                  header: [{ text: "Actions", css: "text-center" }], 
+                  fillspace: true, 
+                  css: "text-center text-sm",
+                  template: function (obj) {
+                    return `
+                      <div class="flex justify-center items-center gap-3 h-full">
+                        <button data-id="${obj._id}" class="detailsBtn px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 transition duration-150">
+                          🗒️ Details
+                        </button>
+                        ${obj.status === "pending" ?
+                        `<button data-id="${obj._id}" class="cancelBtn bg-red-500 px-3 py-1.5 rounded-lg text-sm font-medium text-white hover:bg-orange-500 transition-all duration-150">
+                          🙅‍♂️ Cancel
+                        </button>` : ""
+                        }
+                      </div>
+                    `;
+                  }
+                }
+              ],
+              onClick: {
+                detailsBtn: function(e, id) {
+                  const item = this.getItem(id);
+                  renderDetail(item._id);
+                  webix.message("Detail feature - ID: " + item._id);
+                },
+                cancelBtn: function(e, id) {
+                  const item = this.getItem(id);
+                  webix.confirm({
+                    title: "Cancel Request",
+                    text: "Are you sure you want to cancel this request?",
+                    ok: "Yes",
+                    cancel: "No",
+                    callback: async (result) => {
+                      if (result) {
+                        await cancelHandler(item._id);
+                      }
+                    }
+                  });
+                }
+              }
+            }
+          ]
+        });
+        
+        await fetchListRequest();
+      });
+    </script>
+  </body>
+</html>

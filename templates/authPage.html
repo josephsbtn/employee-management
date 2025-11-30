@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aventra - Login</title>
+
+    <script
+      type="text/javascript"
+      src="https://cdn.webix.com/edge/webix.js"></script>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.webix.com/edge/webix.css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='style/main.css') }}" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap"
+      rel="stylesheet" />
+
+    <style>
+      .logo-area,
+      .template-button-area {
+        background: transparent !important;
+      }
+      body {
+        background: radial-gradient(
+            circle at 20% 30%,
+            rgba(77, 163, 255, 0.2),
+            transparent 40%
+          ),
+          radial-gradient(
+            circle at 80% 70%,
+            rgba(231, 182, 94, 0.25),
+            transparent 40%
+          ),
+          var(--bg-light);
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100">
+    <div class="min-h-screen flex items-center justify-around p-4">
+      <div
+        class="w-fit h-full flex items-center justify-around bg-white border-[1px] border-[#e7e7e7] rounded-2xl shadow-md p-4">
+        <div id="form"></div>
+        <div class="border-[2px] border-[#e7e7e7] p-4 rounded-full">
+          <img
+            src="{{ url_for('static', filename='photo/grapichLogin.svg') }}"
+            class="w-80 h-80" />
+        </div>
+      </div>
+    </div>
+
+    <script>
+      webix.ready(function () {
+        webix.ui({
+          container: "form",
+          view: "form",
+          id: "loginForm",
+          width: 380,
+          css: "!bg-transparent !shadow-none !border-none",
+          elementsConfig: {
+            labelPosition: "top",
+          },
+          rows: [
+            {
+              height: 110,
+              borderless: true,
+              css: "logo-area",
+              template: `
+                            <div class='text-center pt-4'>
+                                <h1 class='text-[var(--sunrise-red)] text-4xl font-bold' '>Aventra</h1>
+                                <div class="border-[1px] border-[#e7e7e7] my-4"></div>
+                            </div>
+                        `,
+            },
+            {
+              view: "text",
+              label: "Email",
+              name: "email",
+              placeholder: "Enter your email",
+            },
+            {
+              view: "text",
+              type: "password",
+              label: "Password",
+              name: "password",
+              placeholder: "Enter your password",
+            },
+            { height: 10 },
+            {
+              view: "template",
+              borderless: true,
+              css: "template-button-area",
+              height: 50,
+              template: `
+                            <button class='w-full h-full font-bold text-base rounded-lg transition-colors
+                                        gradient-btn text-[var(--pure-white)]
+                                        hover:bg-[var(--sunrise-red)] hover:text-[var(--pure-white)] login-button'>
+                                Login
+                            </button>
+                        `,
+              onClick: {
+                "login-button": (event) => {
+                  webix.message("Loading...");
+                  const form = $$("loginForm");
+                  if (!form.validate()) {
+                    webix.message({
+                      type: "error",
+                      text: "Email and Password cannot be empty",
+                    });
+                    return;
+                  }
+                  const values = form.getValues();
+                  axios
+                    .post(
+                      "/auth/login",
+                      {
+                        email: values.email,
+                        password: values.password,
+                      },
+                      {
+                        headers: {
+                          "Content-Type": "application/json",
+                        },
+                      }
+                    )
+                    .then((response) => {
+                      console.log(response.data);
+                      if (!response.data.status) {
+                        webix.message({
+                          type: "error",
+                          text: response.data.message,
+                          expire: 5000,
+                        });
+                        return;
+                      }
+                      webix.message({
+                        type: "success",
+                        text: "Login Successful!",
+                      });
+                      setTimeout(() => {
+                        window.location.href = "/dashboard";
+                      }, 500);
+                    })
+                    .catch((error) => {
+                      const res = error.response?.data;
+                      //STANDARISASI ERROR DARI BACKEND
+                      if (res?.errors) {
+                        Object.entries(res.errors).forEach(([key, value]) => {
+                          $$("loginForm").markInvalid(key, value.join(", "));
+                        });
+                      } else {
+                        webix.message({
+                          type: "error",
+                          text: res?.message || "Login failed",
+                          expire: 5000,
+                        });
+                      }
+                    });
+                },
+              },
+            },
+            { height: 20 },
+          ],
+          rules: {
+            email: webix.rules.isNotEmpty,
+            password: webix.rules.isNotEmpty,
+          },
+        });
+      });
+    </script>
+  </body>
+</html>
