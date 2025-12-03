@@ -165,10 +165,14 @@
               formatted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
                console.log("formatted", formatted);
               
-              // Filter hanya attendance & leave untuk user yang sedang login
-              formatted = formatted.filter((item) => 
+               if (currentUser.role === "employee") {
+                 formatted = formatted.filter((item) => 
                 item.type === "attendance" || item.type === "leave"
               );
+               }else{
+                formatted = formatted.filter((item) => item.type !== "branch");
+               }
+              
 
               table.parse(formatted);
             } catch (err) {

@@ -2,6 +2,58 @@ from utils.mongoConnect import mongoConnection
 from pymongo.errors import PyMongoError
 
 class BaseRepo:
+    """
+    =================================================================================
+    BASE REPOSITORY - DOKUMENTASI
+    =================================================================================
+
+    MODULE: Base Repository untuk Database Operations
+
+    DESKRIPSI:
+    Class ini adalah base repository yang menyediakan operasi CRUD dasar untuk 
+    semua collection MongoDB. Semua repository lain harus inherit dari class ini.
+
+    FITUR UTAMA:
+    - Create: Insert single/multiple documents
+    - Read: Get single/multiple documents dengan query
+    - Update: Update single/multiple documents
+    - Delete: Delete single/multiple documents
+    - Error handling untuk PyMongo dan generic exceptions
+
+    METHODS:
+    1. setCollection(entity)           → Set MongoDB collection
+    2. insertData(data, Multi)         → Insert document(s)
+    3. getData(id, query)              → Get single document
+    4. getAllData(query)               → Get multiple documents
+    5. getDataById(id)                 → Get document by _id
+    6. updateData(data, id, query...)  → Update document(s)
+    7. deleteData(id, query, multi)    → Delete document(s)
+
+    ERROR HANDLING:
+    - PyMongoError: Database-specific errors
+    - Exception: Generic Python exceptions
+    - Semua errors di-raise untuk handling di service layer
+
+    USAGE EXAMPLE:
+    ```python
+    from repository.baseRepo import BaseRepo
+
+    class EmployeeRepo(BaseRepo):
+        def __init__(self):
+            super().__init__("employees")
+        
+        def getByEmail(self, email):
+            return self.getData(query={"email": email})
+    ```
+
+    NOTES:
+    - Query menggunakan MongoDB query syntax
+    - Multi=True untuk operasi batch
+    - _id otomatis di-remove saat update untuk menghindari error
+    - Semua results dari find() di-convert ke list
+
+    =================================================================================
+    """
     def __init__(self ,collection):
         try:
             self.collection = None

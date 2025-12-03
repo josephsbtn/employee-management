@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, jsonify, make_response, url_for
-from service.annualRequestService import AnnualRequestService
+from service.leaveRequestService import LeaveRequestService
 from utils.jwtHandler import SessionService
 from validation.fileValidation import FileValidation
 import os
@@ -7,8 +7,80 @@ import random
 import pendulum
 import json
 
+"""
+=================================================================================
+LEAVE REQUEST MANAGEMENT API - DOKUMENTASI
+=================================================================================
+
+MODULE: Manajemen Permohonan Cuti Karyawan
+
+AUTENTIKASI:
+- Semua endpoint memerlukan JWT token di cookies
+- Validasi menggunakan SessionService.checkAccess()
+
+AUTHORIZATION:
+- Owner: Approve/reject semua request, lihat semua request
+- Manager: Approve/reject request cabang, lihat request cabang, buat request
+- Employee: Buat request, lihat request sendiri, cancel request sendiri
+
+FITUR UTAMA:
+- Buat permohonan cuti (annual leave)
+- Upload attachment (opsional)
+- Lihat daftar request (employee/manager/owner)
+- Detail request
+- Approve/reject request (manager/owner)
+- Cancel request (employee/manager)
+
+ENDPOINTS:
+1. POST /request                    → Buat permohonan cuti
+2. GET  /list-employee              → Daftar request karyawan (pribadi)
+3. GET  /list-manager               → Daftar request untuk manager/owner
+4. GET  /detail/<request_id>        → Detail request
+5. PUT  /approve/<request_id>       → Approve request
+6. PUT  /reject/<request_id>        → Reject request
+7. PUT  /cancel/<request_id>        → Cancel request
+
+FORMAT REQUEST:
+- POST /request:
+  {
+    "type": "annual",
+    "startDate": "YYYY-MM-DD",
+    "endDate": "YYYY-MM-DD",
+    "reason": "Alasan cuti",
+    "attachment": file (optional)
+  }
+
+- PUT /approve/<request_id>:
+  {
+    "approvalNote": "Catatan persetujuan (optional)"
+  }
+
+- PUT /reject/<request_id>:
+  {
+    "rejectionNote": "Alasan penolakan"
+  }
+
+FORMAT RESPONSE:
+Success: {"status": true, "message": "...", "data": {...}}
+Error:   {"status": false, "message": "...", "errors": {...}}
+
+NOTES:
+- File attachment disimpan di ./uploads/annualAttachment/
+- Format file: ANNUAL-XXYYYYMMDDHHMMSS.ext
+- Request ID format: ANNUAL-XXYYYYMMDDHHMMSS
+- Manager hanya bisa approve/reject request di cabangnya
+- Owner bisa approve/reject semua request
+
+FILE UPLOAD:
+- Supported formats: jpg, jpeg, png, pdf, doc, docx
+- Max size ditentukan di FileValidation
+- File disimpan dengan nama unik untuk menghindari konflik
+
+=================================================================================
+"""
+
 annualRequestBp = Blueprint("annualRequestBp", __name__)
-service = AnnualRequestService()
+service = LeaveRequestService()
 session = SessionService()
 
 
@@ -19,7 +91,8 @@ def annualRequest():
     currentUser = session.checkAccess(["manager", "employee"], token)
     
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
         
     directory = "./uploads/annualAttachment"
     os.makedirs(directory, exist_ok=True)
@@ -71,7 +144,8 @@ def listAnnualRequest():
     currentUser = session.checkAccess(["manager", "employee"], token)
 
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     result = service.listAnnualByEmployee(id=currentUser["data"]["_id"])
     return jsonify(result), 200
@@ -79,11 +153,14 @@ def listAnnualRequest():
 @annualRequestBp.route("/list-manager", methods=["GET"])
 def listRequest():
     token = request.cookies.get("token")
-    currentUser = session.checkAccess(["manager", "employee"], token)
+    currentUser = session.checkAccess(["manager", "owner"], token)
 
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
-    
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
+    if currentUser["data"]["role"] == "owner":
+        result = service.getRequestByOwner()
+        return jsonify(result), 200
     result = service.getRequestByBranch(currentUser=currentUser["data"])
     return jsonify(result), 200
 
@@ -91,9 +168,10 @@ def listRequest():
 def detailRequest(request_id):
     print("-----------[DETAIL ANNUAL REQUEST]-----------")
     token = request.cookies.get("token")
-    currentUser = session.checkAccess(["manager", "employee"], token)
+    currentUser = session.checkAccess(["manager", "employee", "owner"], token)
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     result = service.details(id=request_id)
     return jsonify(result), 200
@@ -104,7 +182,8 @@ def cancelRequest(request_id):
     token = request.cookies.get("token")
     currentUser = session.checkAccess(["manager", "employee"], token)
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     result = service.cancelRequest(id=request_id, currentUser=currentUser["data"])
     return jsonify(result), 200 
 
@@ -112,9 +191,10 @@ def cancelRequest(request_id):
 def approveRequest(request_id):
     print("-----------[APPROVE ANNUAL REQUEST]-----------")
     token = request.cookies.get("token")
-    currentUser = session.checkAccess(["manager", "employee"], token)
+    currentUser = session.checkAccess(["manager", "owner"], token)
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     data = request.get_json()
     result = service.approveRequest(id=request_id, currentUser=currentUser["data"], data=data)
     return jsonify(result), 200
@@ -123,9 +203,10 @@ def approveRequest(request_id):
 def rejectRequest(request_id):
     print("-----------[REJECT ANNUAL REQUEST]-----------", request_id)
     token = request.cookies.get("token")
-    currentUser = session.checkAccess(["manager", "employee"], token)
+    currentUser = session.checkAccess(["manager", "owner"], token)
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     data = request.get_json()
     result = service.rejectRequest(id=request_id, currentUser=currentUser["data"],data=data )
     return jsonify(result), 200

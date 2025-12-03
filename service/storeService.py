@@ -201,3 +201,13 @@ class StoreService:
         except Exception as e:
             raise Exception(f"Failed to get data {e}")
         
+    def getActiveStore(self):
+        try:
+            data = self.repo.getAllData(query={"status": "active"})
+            print("DATA : ", data)
+            data = self.schema.dump(data, many=True)
+            print("DATA : ", data)
+            return {"status": True, "message": "Data fetched successfully", "data": data}
+        except Exception as e:
+            raise Exception(f"Failed to get data {e}")
+        

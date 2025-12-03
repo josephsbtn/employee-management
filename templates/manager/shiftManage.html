@@ -4,7 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Aventra - Shift</title>
-
     <script type="text/javascript" src="https://cdn.webix.com/edge/webix.js"></script>
     <link rel="stylesheet" type="text/css" href="https://cdn.webix.com/edge/webix.css" />
     <script src="https://cdn.tailwindcss.com"></script>
@@ -17,60 +16,182 @@
     <script src="../static/js/sideNavbar.js"></script>
     <script src="../static/js/shift.js"></script>
 
+    <style>
+      .gradient-btn {
+        background-image: linear-gradient(
+          to right,
+          var(--arunika-gold),
+          var(--sunrise-red)
+        );  
+      }
+      
+      /* Add smooth transitions */
+      .stat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
+
+      /* Sidebar overlay and mobile responsiveness */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        transition: opacity 0.3s ease;
+      }
+      
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+      }
+      
+      @media (max-width: 768px) {
+        #sidebar-container {
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+          z-index: 50;
+        }
+        
+        #sidebar-container.active {
+          transform: translateX(0);
+        }
+        
+        .main-content {
+          margin-left: 0 !important;
+        }
+      }
+      
+      .hamburger-line {
+        transition: all 0.3s ease;
+      }
+      
+      .hamburger.active .line1 {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+      
+      .hamburger.active .line2 {
+        opacity: 0;
+      }
+      
+      .hamburger.active .line3 {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+
+      /* Mobile adjustments for shift containers */
+      @media (max-width: 768px) {
+        #shiftList {
+          flex-direction: column;
+        }
+        
+        #employees-list,
+        #dayShift-list,
+        #nightShift-list {
+          width: 100% !important;
+          max-height: 300px;
+        }
+      }
+    </style>
   </head>
 
-  <body class="bg-gray-100 font-sans">
-    <div class="flex h-screen bg-gray-200">
-      <aside
-        class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm z-20"
-        id="sidebar-container"
-      ></aside>
+  <body class="flex h-screen overflow-hidden bg-gray-100 font-sans">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-      <div class="flex-1 ml-64 flex flex-col overflow-hidden">
-        <header
-          class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
-          id="top-nav"
-        ></header>
+    <aside
+      class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm"
+      id="sidebar-container"></aside>
 
-        <main class="flex-1 overflow-y-auto p-6 bg-[var(--bg-light)]">
-          <div class="flex flex-col justify-start items-center mb-1 p-4 rounded-lg h-full" id="content">
-            <div class="w-full flex justify-between items-center mb-4" id="content-tools">
-              <h1 class="text-2xl font-semibold text-[var(--text-primary)]">Shift</h1>
-              <div class="flex items-center space-x-3">
-                <label for="datePicker" class="text-gray-700 font-medium">Date:</label>
-                <input
-                  type="date"
-                  id="datePicker"
-                  class="border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--arunika-gold)]"
-                />
-              </div>
-            </div>
+    <div class="flex-1 flex flex-col overflow-hidden main-content md:ml-64">
+      <header
+        class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]">
+        <button
+          class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          id="hamburgerBtn">
+          <div class="hamburger w-6 h-5 flex flex-col justify-between">
+            <span class="hamburger-line line1 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line2 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line3 w-full h-0.5 bg-gray-700 rounded"></span>
+          </div>
+        </button>
 
-            <div class="w-full rounded-xl shadow-sm h-full flex gap-4 items-center justify-start " id="shiftList">
-              <div class="w-[40%] bg-white h-full flex flex-col items-start justify-start p-4 rounded-lg gap-y-1 overflow-y-auto" id="employees-list">
-                <h1 class="text-2xl font-semibold text-[var(--text-primary)] mb-3">Employees</h1>
-                <div class="grid gap-2 w-full " id="employees-container"></div>
-                
-                
-              </div>
-              <div class="w-full bg-white h-full flex flex-col items-start justify-start p-4 rounded-lg overflow-y-auto" id="dayShift-list">
-                 <h1 class="text-2xl font-semibold text-[var(--text-primary)] mb-3">Day Shift</h1>
-                <div class="grid gap-2 overflow-y-auto w-full" id="dayShift-container"></div>
-              </div>
-              <div class="w-full bg-white h-full flex flex-col items-start justify-start p-4 rounded-lg overflow-y-auto" id="nightShift-list">
-                <h1 class="text-2xl font-semibold text-[var(--text-primary)] mb-3">Night Shift</h1>
-                <div class="grid gap-2 overflow-y-auto w-full" id="nightShift-container"></div>
-              </div>
-            </div>
-            <div class="w-full bg-white h-fit mt-4 flex items-center justify-between p-2 rounded-lg gap-x-2" id="makeShiftBtn">
+        <div class="flex-1" id="top-nav"></div>
+      </header>
+
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--bg-light)]">
+        <div class="flex flex-col justify-start items-center mb-1 p-2 md:p-4 rounded-lg h-full" id="content">
+          <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3" id="content-tools">
+            <h1 class="text-xl md:text-2xl font-semibold text-[var(--text-primary)]">Shift</h1>
+            <div class="flex items-center space-x-2 md:space-x-3 w-full sm:w-auto">
+              <label for="datePicker" class="text-gray-700 font-medium text-sm md:text-base">Date:</label>
+              <input
+                type="date"
+                id="datePicker"
+                class="border border-gray-300 rounded-lg px-2 md:px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[var(--arunika-gold)] text-sm md:text-base flex-1 sm:flex-initial"
+              />
             </div>
           </div>
-        </main>
-      </div>
+
+          <div class="w-full rounded-xl shadow-sm h-full flex flex-col md:flex-row gap-3 md:gap-4 items-start justify-start" id="shiftList">
+            <div class="w-full md:w-[40%] bg-white h-[300px] md:h-full flex flex-col items-start justify-start p-3 md:p-4 rounded-lg gap-y-1 overflow-y-auto" id="employees-list">
+              <h1 class="text-lg md:text-2xl font-semibold text-[var(--text-primary)] mb-2 md:mb-3">Employees</h1>
+              <div class="grid gap-2 w-full" id="employees-container"></div>
+            </div>
+            
+            <div class="w-full md:flex-1 bg-white h-[300px] md:h-full flex flex-col items-start justify-start p-3 md:p-4 rounded-lg overflow-y-auto" id="dayShift-list">
+              <h1 class="text-lg md:text-2xl font-semibold text-[var(--text-primary)] mb-2 md:mb-3">Day Shift</h1>
+              <div class="grid gap-2 overflow-y-auto w-full" id="dayShift-container"></div>
+            </div>
+            
+            <div class="w-full md:flex-1 bg-white h-[300px] md:h-full flex flex-col items-start justify-start p-3 md:p-4 rounded-lg overflow-y-auto" id="nightShift-list">
+              <h1 class="text-lg md:text-2xl font-semibold text-[var(--text-primary)] mb-2 md:mb-3">Night Shift</h1>
+              <div class="grid gap-2 overflow-y-auto w-full" id="nightShift-container"></div>
+            </div>
+          </div>
+          
+          <div class="w-full bg-white h-fit mt-3 md:mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between p-3 md:p-2 rounded-lg gap-2 md:gap-x-2" id="makeShiftBtn">
+          </div>
+        </div>
+      </main>
     </div>
 
     <script>
+      // Hamburger menu functionality
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar-container");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
 
+      function toggleSidebar() {
+        sidebar.classList.toggle("active");
+        sidebarOverlay.classList.toggle("active");
+        hamburgerBtn.querySelector(".hamburger").classList.toggle("active");
+
+        if (sidebar.classList.contains("active")) {
+          document.body.style.overflow = "hidden";
+        } else {
+          document.body.style.overflow = "";
+        }
+      }
+
+      hamburgerBtn.addEventListener("click", toggleSidebar);
+      sidebarOverlay.addEventListener("click", toggleSidebar);
+
+      sidebar.addEventListener("click", (e) => {
+        if (e.target.tagName === "A" && window.innerWidth < 768) {
+          toggleSidebar();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth >= 768 && sidebar.classList.contains("active")) {
+          toggleSidebar();
+        }
+      });
+
+      // Main initialization
       document.addEventListener("DOMContentLoaded", async () => {
         topNav();
         navbarSide(pagesAdmin);

@@ -145,9 +145,9 @@
                 { id: "address", header: "Address", fillspace: true },
                 {
                   id: "status",
-                  header: "Status",
+                  header: { text: "Status", css: "text-center" },
                   fillspace: true,
-                  css: "text-start text-sm",
+                  css: "text-center text-sm",
                   template: function (obj) {
                     const color = obj.status === "active" ? "text-green-600" : "text-red-600";
                     return `<span class="${color} font-semibold">${obj.status || "-"}</span>`;
@@ -155,15 +155,15 @@
                 },
                 {
                   id: "actions",
-                  header: "Actions",
+                  header: { text: "Actions", css: "text-center" },
                   css: "text-start text-sm",
                   width: 350,
                   template: function (obj) {
-                    const editBtn = `<button class="editBtn px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-500 hover:text-white">✏️ edit</button>`;
+                    const editBtn = obj.status === "active" ? `<button class="editBtn px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-blue-500 hover:text-white">✏️ edit</button>` : "";
                     const actionBtn =
                       obj.status === "active"
                         ? `<button class="nonActiveBtn px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-red-500 hover:bg-red-600">🗑️ close</button>`
-                        : `<button class="activeBtn px-3 py-1.5 rounded-lg text-sm font-medium text-white bg-green-500 hover:bg-green-600">🟢 activate</button>`;
+                        : "";
                     return `<div class="flex justify-center items-center gap-3 h-full">${editBtn}${actionBtn}</div>`;
                   },
                 },
@@ -228,7 +228,6 @@
           ],
         });
 
-        // store form window
         webix.ui({
           view: "window",
           id: "storeWindow",
@@ -289,7 +288,13 @@
                         if (values._id) {
                           const res = await axios.put(`/api/branch/update/${values._id}`, values);
                           if (res?.status === 200 && (res?.data?.status ?? true)) {
-                            webix.message("✅ Updated successfully!");
+                            webix.message(
+                              {
+                                text: "✅ Store updated successfully!",
+                                type: "success",
+                                expire: 3000,
+                              }
+                            );
                           } else {
                             webix.alert("❌ Failed to update store!");
                           }
@@ -301,7 +306,11 @@
                               .join("<br>");
                             webix.message({ type: "error", text: allErrors || "Validation failed", expire: 5000 });
                           } else {
-                            webix.message("✅ Added successfully!");
+                            webix.message({
+                              type: "success",
+                              text: "✅ Store created successfully!",
+                              expire: 3000,
+                            });
                           }
                         }
 
@@ -376,7 +385,7 @@
           const { lat, lng } = e.latlng;
           selectedCoordinates = [lng, lat];
           marker.setLatLng([lat, lng]);
-          webix.message({ text: "✅ Location selected!", type: "success", expire: 1500 });
+          webix.message({ text: "Location selected!", expire: 1500 });
         });
       }
     </script>

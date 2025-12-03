@@ -218,12 +218,15 @@ class AttendanceService:
             
             employeeShift = None
             endTime = None
+            isLate = False
 
             for emp in shiftParent["employees"]:
                 if emp["employeeId"] == employeeId:
                     if emp["clockIn"] is None or emp["clockIn"] == "":
                         return {"status": False, "message": "Employee not clocked in"}
                     employeeShift = emp["shift"]
+                    if emp["status"] == "late":
+                        isLate = True
                     print("employeeShift = ", employeeShift)
                     break
 
@@ -259,11 +262,18 @@ class AttendanceService:
             if not result.acknowledged:
                 return {"status": False, "message": "Failed to update data"}
             
-            self.employeeRepo.updateData(query={"_id" : employeeId }, update={
-                "$inc" : {
-                    "workDays" : 1
-                }
-            })
+            if isLate:
+                self.employeeRepo.updateData(query={"_id" : employeeId }, update={
+                    "$inc" : {
+                        "lateDays" : 1
+                    }
+                })
+            else : 
+                self.employeeRepo.updateData(query={"_id" : employeeId }, update={
+                    "$inc" : {
+                        "workDays" : 1
+                    }
+                })
             
             history = HistoryService().createHistory(data={
                 "employeeId": employee["_id"],
@@ -309,7 +319,7 @@ class AttendanceService:
         Returns:
             dict: Dictionary berisi:
                 - status (bool): Status operasi
-                - message (str): Pesan hasil operasi (termasuk status present/late)
+                - message (str): Pesan hasil operasi (termasuk status present/la    te)
                 
         Raises:
             ValidationError: Jika data tidak valid menurut schema
@@ -418,7 +428,6 @@ class AttendanceService:
                 "employeeName": employee["name"],
                 "description": f"Clocked in successfully as {status}",
                 "type": "attendance",
-                "createdAt": now
             })
             
             if not history["status"]:
@@ -496,12 +505,18 @@ class AttendanceService:
                 return {"status": False, "message": "Shift already exists for this date"}
             valid_shifts = [s["shiftName"] for s in self.shiftsRepo.getAllData()]
             print("VALID SHIFTS:", valid_shifts)
-
-            validated_employees = []
+            manager = {
+                "employeeId": currentUser["_id"],
+                "shift": "fullday",
+                "clockIn": None,
+                "clockOut": None
+            }
+            validated_employees = [manager]
             for emp in data.get("employees", []):
                 if emp["shift"] not in valid_shifts:
                     raise Exception(f"Invalid shift name: {emp['shift']}")
                 validated_employees.append(self.EmploAttendSchema.load(emp))
+            print("[VALIDATED EMPLOYEES]:", validated_employees)
 
             data["employees"] = validated_employees
 
@@ -514,7 +529,7 @@ class AttendanceService:
             history = HistoryService().createHistory(data={
                 "employeeId": currentUser["_id"],
                 "employeeName": currentUser["name"],
-                "description": f"Shift data inserted successfully",
+                "description": f"Shift data inserted successfully {data['Date']} || {data['branchId']}",
                 "type": "shift"
             })
             if not history["status"]:
@@ -673,7 +688,13 @@ class AttendanceService:
             valid_shifts = [s["shiftName"] for s in self.shiftsRepo.getAllData()]
             print("VALID SHIFTS:", valid_shifts)
 
-            validated_employees = []
+            manager = {
+                "employeeId": employee["_id"],
+                "shift": "fullday",
+                "clockIn": None,
+                "clockOut": None
+            }
+            validated_employees = [manager]
             for emp in data.get("employees", []):
                 if emp["shift"] not in valid_shifts:
                     raise Exception(f"Invalid shift name: {emp['shift']}")

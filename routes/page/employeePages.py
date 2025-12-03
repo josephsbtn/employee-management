@@ -14,13 +14,13 @@ def historyAttendance():
             return redirect("/notHaveAccess")
         return render_template("employee/attendanceHistory.html")
     except Exception as e:
-        return redirect("/")
+        return redirect("/")    
 
 @EmployeePageBp.route("/leave-request", methods=["GET"])
 def annualRequest():
     try:
         token = request.cookies.get("token")
-        currentUser = SessionService().checkAccess(["employee"], token)
+        currentUser = SessionService().checkAccess(["employee", "manager"], token)
         if currentUser['status'] == False:
             return redirect("/notHaveAccess")
         return render_template("employee/leaveRequest.html")

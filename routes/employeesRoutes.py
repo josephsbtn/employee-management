@@ -1,47 +1,62 @@
-from flask import Blueprint, request, jsonify, render_template, redirect
+from flask import Blueprint, request, jsonify, render_template, redirect, make_response
 from service.employeeService import EmployeeService
 from utils.jwtHandler import SessionService
 from utils.utility import Utility
+
+"""
+=================================================================================
+EMPLOYEE MANAGEMENT API - DOKUMENTASI
+=================================================================================
+
+MODULE: Manajemen Karyawan (CRUD + Aktivasi/Deaktivasi)
+
+AUTENTIKASI:
+- Semua endpoint memerlukan JWT token di cookies
+- Validasi menggunakan SessionService.checkAccess()
+
+AUTHORIZATION:
+- Owner: Akses penuh semua data
+- Manager: Hanya karyawan di cabang yang sama
+- Employee: Hanya profil sendiri
+
+KEAMANAN:
+- ID parameter disanitasi (blockMongoInject, sanitizeHTML)
+- Validasi token setiap request
+- Error 403 untuk akses tidak sah, 400 untuk request invalid
+
+ENDPOINTS:
+1. GET    /all           → Daftar karyawan
+2. POST   /create        → Tambah karyawan baru
+3. PUT    /update/<id>   → Update data karyawan
+4. PUT    /fire/<id>     → Nonaktifkan (soft delete)
+5. DELETE /delete/<id>   → Hapus permanen (hard delete)
+6. PUT    /activate/<id> → Aktifkan kembali
+7. GET    /<id>          → Detail karyawan
+8. GET    /profile       → Profil user login
+
+FORMAT RESPONSE:
+Success: {"status": true, "message": "...", "data": {...}}
+Error:   {"status": false, "message": "..."}
+
+=================================================================================
+"""
+
 employeesBp = Blueprint("employeesBp", __name__)
 service = EmployeeService()
 session = SessionService()
 utility = Utility()
 
+
+
 @employeesBp.route("/all", methods=["GET"])
 def allEmployees():
-    """Get all employees
-
-    Endpoint:
-        GET /employees/all
-
-    Description:
-        Mengambil semua data karyawan dari database.
-
-    Returns:
-        __object__: {
-            "status": True,
-            "message": "Data fetched successfully",
-            "data": [
-                {
-                    "_id": "string",
-                    "name": "string",
-                    "email": "string",
-                    "status": "string",
-                    "role": "string"
-                }
-            ]
-        }
-
-    Raises:
-        Exception: Jika terjadi kesalahan saat pengambilan data.
-    """
     token = request.cookies.get("token")
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
     result = session.checkAccess(["owner", "manager"], token)
-    print("[INFO] Result jtw get all employee:", result)
     if result["status"] == False:
-        return jsonify(result), 403
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     if result["data"]["role"] == "manager":
         print("[INFO] Branch ID IN GET ALL EMPLOYEES:", result["data"]["branchId"])
         data = service.getAllEmployee(result["data"]["branchId"])
@@ -53,42 +68,11 @@ def allEmployees():
 
 @employeesBp.route("/create", methods=["POST"])
 def createEmployee():
-    """Create new employee
-
-    Endpoint:
-        POST /employees/create
-
-    Description:
-        Menambahkan data karyawan baru ke dalam database.
-
-    Request Body:
-        __object__: {
-            "name": "string",
-            "email": "string",
-            "password": "string",
-            "status": "string",
-            "role": "string",
-            "branchId": "string",
-            "salary": Number
-        }
-
-    Returns:
-        __object__: {
-            "status": True,
-            "message": "Data inserted successfully",
-            "data": {
-                "inserted_id": "string"
-            }
-        }
-
-    Raises:
-        ValidationError: Jika data request tidak sesuai dengan schema validasi.
-        Exception: Jika proses penyimpanan data gagal.
-    """
     token = request.cookies.get("token")
     currentUser = session.checkAccess(["owner", "manager"], token)
-    if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     data = request.get_json()
     
@@ -105,47 +89,13 @@ def createEmployee():
 
 @employeesBp.route("/update/<id>", methods=["PUT"])
 def updateEmployee(id):
-    """Update employee data
-
-    Endpoint:
-        PUT /employees/update/<id>
-
-    Description:
-        Memperbarui data karyawan berdasarkan ID.
-
-    Path Parameters:
-        id (string): ID dari karyawan yang akan diperbarui.
-
-    Request Body:
-        __object__: {
-            "name": "string",
-            "email": "string",
-            "status": "string",
-            "role": "string",
-            "branchId": "string",
-            "salary": Number
-        }
-
-    Returns:
-        __object__: {
-            "status": True,
-            "message": "Data updated successfully",
-            "data": {
-                "matched_count": int,
-                "modified_count": int
-            }
-        }
-
-    Raises:
-        ValidationError: Jika data tidak sesuai schema validasi.
-        Exception: Jika update data gagal.
-    """
     token = request.cookies.get("token")
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
-    result = session.checkAccess(["owner", "manager"], token)
-    if result["status"] == False:
-        return jsonify(result), 403
+    currentUser = session.checkAccess(["owner", "manager"], token)
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     utility.blockMongoInject(id)
     sanitizedId = utility.sanitizeHTML(id)
@@ -156,7 +106,7 @@ def updateEmployee(id):
     if not data:
         return jsonify({"status": False, "message": "No data found"}), 400
     
-    updateData = service.updateEmploye(data, id, result["data"])
+    updateData = service.updateEmploye(data, id, currentUser["data"])
     if not updateData.get("status"):
         return jsonify(updateData), 400
     return jsonify(updateData), 200
@@ -164,48 +114,21 @@ def updateEmployee(id):
 
 @employeesBp.route("/fire/<id>", methods=["PUT"])
 def fireEmployee(id):
-    """Deactivate (fire) an employee
-
-    Endpoint:
-        DELETE /employees/fire/<id>
-
-    Description:
-        Mengubah status karyawan menjadi "inactive" berdasarkan ID.
-        Hanya dapat dilakukan oleh pengguna yang sudah memiliki token valid.
-
-    Path Parameters:
-        id (string): ID dari karyawan yang akan dinonaktifkan.
-
-    Cookie:
-        token (string): Token autentikasi JWT.
-
-    Returns:
-        __object__: {
-            "status": True,
-            "message": "Data deleted successfully",
-            "data": {
-                "matched_count": int,
-                "modified_count": int
-            }
-        }
-
-    Raises:
-        Exception: Jika proses penghapusan data gagal.
-    """
     print("[INFO ROUTES] GET TOKEN FIRE EMPLOYEE")
     token = request.cookies.get("token")
     print("token : ", token)
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
-    result = session.checkAccess(["owner", "manager"], token)
-    if result["status"] == False:
-        return jsonify(result), 403
+    currentUser = session.checkAccess(["owner", "manager"], token)
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     utility.blockMongoInject(id)
     sanitizedId = utility.sanitizeHTML(id)
     id = sanitizedId
     
-    fireData = service.fireEmployee(employee=result["data"], id=id)
+    fireData = service.fireEmployee(employee=currentUser["data"], id=id)
     if not fireData.get("status"):
         return jsonify(fireData), 400
     print("fireData: ", fireData)
@@ -216,9 +139,10 @@ def employeeDetails(id):
     token = request.cookies.get("token")
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
-    result = session.checkAccess(["owner", "manager", "employee"], token)
-    if result["status"] == False:
-        return jsonify(result), 403
+    currentUser = session.checkAccess(["owner", "manager", "employee"], token)
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     utility.blockMongoInject(id)
     sanitizedId = utility.sanitizeHTML(id)
@@ -233,15 +157,16 @@ def deleteEmployee(id):
     token = request.cookies.get("token")
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
-    result = session.checkAccess(["owner", "manager"], token)
-    if result["status"] == False:
-        return jsonify(result), 403
+    currentUser = session.checkAccess(["owner", "manager"], token)
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     utility.blockMongoInject(id)
     sanitizedId = utility.sanitizeHTML(id)
     id = sanitizedId
     
-    data = service.deleteEmployee( id=id, employee=result["data"] )
+    data = service.deleteEmployee( id=id, employee=currentUser["data"] )
     return jsonify(data), 200
 
 @employeesBp.route("/activate/<id>", methods=["PUT"])
@@ -249,15 +174,16 @@ def  activateEmployee(id):
     token = request.cookies.get("token")
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
-    result = session.checkAccess(["owner", "manager"], token)
-    if result["status"] == False:
-        return jsonify(result), 403
+    currentUser = session.checkAccess(["owner", "manager"], token)
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
-    sanitizedId = utility.blockMongoInject(id)
-    sanitizedId = utility.sanitizeHTML(sanitizedId)
+    utility.blockMongoInject(id)
+    sanitizedId = utility.sanitizeHTML(id)
     id = sanitizedId
     
-    data = service.activateEmployee(id=id, employee=result["data"])
+    data = service.activateEmployee(id=id, employee=currentUser["data"])
     return jsonify(data), 200   
 
 @employeesBp.route("/profile", methods=["GET"])
@@ -266,10 +192,10 @@ def employeeProfile():
     token = request.cookies.get("token")
     if not token:
         return jsonify({"status": False, "message": "No token found"}), 400
-    result = session.checkAccess(["owner", "manager", "employee"], token)
-    if result["status"] == False:
-        return redirect("/notHaveAccess")
-   
+    currentUser = session.checkAccess(["owner", "manager", "employee"], token)
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
        
-    data = service.employeeProfile(result["data"])
+    data = service.employeeProfile(currentUser["data"])
     return jsonify(data), 200

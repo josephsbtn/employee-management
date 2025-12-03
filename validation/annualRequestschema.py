@@ -66,7 +66,7 @@ class reviewerSchema(Schema):
     employeeId = fields.Str(required=False, load_default="")
     name = fields.Str(required=False, load_default="")
     note = fields.Str(required=False, load_default="")
-    timeReviewed = fields.DateTime(required=False)
+    timeReviewed = fields.DateTime(required=False, load_default=pendulum.now(tz="Asia/Jakarta"))
 
 class AnnualRequestSchema(Schema):
     """
@@ -240,9 +240,12 @@ class AnnualRequestSchema(Schema):
     reviewer = fields.Nested(reviewerSchema, required=False)
     fileName = fields.Str(required=False)
     attachmentUrl = fields.Str(required=False)
-    createdAt = fields.DateTime(load_default=lambda: pendulum.now(tz="UTC"))
+    createdAt = fields.DateTime(dump_only=True)
+    
+class CreateLeaveRequestSchema(AnnualRequestSchema):
+    createdAt = fields.DateTime(load_only=True, load_default=lambda: pendulum.now(tz="Asia/Jakarta"))
     
     
 class UpdateLeaveRequestSchema(AnnualRequestSchema):
-    updatedAt = fields.DateTime(load_only=True, load_default=lambda: pendulum.now(tz="UTC"))
+    updatedAt = fields.DateTime(load_only=True, load_default=lambda: pendulum.now(tz="Asia/Jakarta"))
     

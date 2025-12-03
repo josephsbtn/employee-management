@@ -209,10 +209,14 @@ class EmployeeService():
             print("[DATA EMPLOYEE MASUK]", data)
             validateData = self.createdSchema.load(data)
             if validateData["role"] == "manager":
-                managers = self.repo.getAllData(query={"role": "manager", "branchId": validateData["branchId"]})
+                managers = self.repo.getAllData(query={"role": "manager", "branchId": validateData["branchId"], "status": "active"})
                 if len(managers) >= 1:
-                    result = {"status": False, "message": "Branch already has a manager"}
+                    result = {"status": False, "message": "Branch already has 2 manager"}
                     return result
+            employees= self.repo.getAllData(query={"branchId": validateData["branchId"], "role": "employee", "status": "active"})
+            if len(employees) >= 6:
+                result = {"status": False, "message": "Branch already has 6 employees"}
+                return result
             print("[VALIDATE NEW EMPLOYEE]", validateData)
             emailUsed = self.repo.getData(query={"email": validateData["email"]})
             
@@ -272,7 +276,7 @@ class EmployeeService():
             'Data Disabled successfully'
         """
         try:
-            res = self.repo.updateData(validateData={"status": "inactive"}, id=id)
+            res = self.repo.updateData(validateData={"status": "inactive", "branchId": ""}, id=id)
             print("[FIRE EMPLOYEE SERVICE] : ", res)
             if not res.acknowledged:
                 result = {"status": False, "message": "Failed to inactivate employee"}
@@ -599,29 +603,26 @@ class EmployeeService():
             'Aventra Salatiga'
         """
         try:
-            print("[masuk employee profile service] : ", employee)
             id = employee["_id"]
             data = self.repo.getData(id=id)
             employee = self.employeeSchema.dump(data)
-            totalStore = None
             if employee is None:
                 result = {"status": False, "message": "Data not found"}
                 return result
-            print("[SERVICE EMPLOYEE PROFILE]: ", employee)
             store = None
             if employee.get("role") != "owner":
                 store = self.branchService.getStoreDetails(employee["branchId"])["data"]
             else :
                 store = self.branchService.getAllStore()
-                totalStore = len(store["data"])
+                totalEmployees = self.repo.getAllData()
+                employee["totalStore"] =  len(store["data"])
+                employee["totalEmployee"] = len(totalEmployees)-1
             
             if employee["role"] != "employee":
-                employee["workDays"] = pendulum.now("Asia/Jakarta").weekday() - pendulum.parse(employee["createdAt"], tz="Asia/Jakarta").weekday()
+                employee["workDays"] = (pendulum.now("Asia/Jakarta").date() - pendulum.parse(employee["createdAt"], tz="Asia/Jakarta").date()).days
                 print("MANAGER WORKDAYS : ",employee["workDays"])
                 
             employee["branch"] = store
-            employee["totalStore"] = totalStore
-            print("[SERVICE EMPLOYEE PROFILE]: ", employee)
             return {"status": True, "message": "Data fetched successfully", "data": employee}
         except ValidationError as e:
             raise ValidationError(e)

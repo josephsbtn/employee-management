@@ -26,6 +26,17 @@ def branchPerformance():
         return render_template("branchPerformance.html")
     except Exception as e:
         return redirect("/")
+    
+@OwnerPageBp.route("/leave-request", methods=["GET"])
+def annualRequest():
+    try:
+        token = request.cookies.get("token")
+        currentUser = SessionService().checkAccess(["owner"], token)
+        if currentUser['status'] == False:
+            return redirect("/notHaveAccess")
+        return render_template("manager/leaveRequestManage.html")
+    except Exception as e:
+        return redirect("/")
 
 @OwnerPageBp.route("/history", methods=["GET"])
 def history():

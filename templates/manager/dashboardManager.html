@@ -25,6 +25,7 @@
       rel="stylesheet" />
     <script src="../../static/js/sideNavbar.js"></script>
     <script src="../../static/js/listShift.js"></script>
+    <script src="../../static/js/getLocation.js"></script>
 
     <style>
       .gradient-btn {
@@ -34,61 +35,175 @@
           var(--sunrise-red)
         );  
       }
-    </style>
+      
+      /* Add smooth transitions */
+      .stat-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+      
+      .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      }
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap"
-      rel="stylesheet" />
+      /* Sidebar overlay and mobile responsiveness */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 40;
+        transition: opacity 0.3s ease;
+      }
+      
+      .sidebar-overlay.active {
+        display: block;
+        opacity: 1;
+      }
+      
+      @media (max-width: 768px) {
+        #sidebar-container {
+          transform: translateX(-100%);
+          transition: transform 0.3s ease;
+          z-index: 50;
+        }
+        
+        #sidebar-container.active {
+          transform: translateX(0);
+        }
+        
+        .main-content {
+          margin-left: 0 !important;
+        }
+      }
+      
+      .hamburger-line {
+        transition: all 0.3s ease;
+      }
+      
+      .hamburger.active .line1 {
+        transform: rotate(-45deg) translate(-5px, 6px);
+      }
+      
+      .hamburger.active .line2 {
+        opacity: 0;
+      }
+      
+      .hamburger.active .line3 {
+        transform: rotate(45deg) translate(-5px, -6px);
+      }
+    </style>
   </head>
 
-  <body class="flex h-screen">
+  <body class="flex h-screen overflow-hidden">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <aside
-      class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm z-20"
+      class="w-64 bg-[var(--pure-white)] border-r border-[var(--warm-gray)] flex flex-col fixed h-full shadow-sm"
       id="sidebar-container"></aside>
 
-    <div class="flex-1 ml-64 flex flex-col overflow-hidden">
+    <div class="flex-1 flex flex-col overflow-hidden main-content md:ml-64">
       <header
-        class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]"
-        id="top-nav"></header>
+        class="bg-[var(--card-bg)] shadow-sm p-4 flex justify-between items-center border-b border-[var(--warm-gray)]">
+        <button
+          class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          id="hamburgerBtn">
+          <div class="hamburger w-6 h-5 flex flex-col justify-between">
+            <span class="hamburger-line line1 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line2 w-full h-0.5 bg-gray-700 rounded"></span>
+            <span class="hamburger-line line3 w-full h-0.5 bg-gray-700 rounded"></span>
+          </div>
+        </button>
 
-     <main class="flex-1 overflow-y-auto p-6 bg-[var(--bg-light)]">
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6" id="summary-cards">
-        <div class="bg-white p-4 rounded-xl shadow text-center">
-          <h3 class="text-sm text-gray-500">Total Employees</h3>
-          <p class="text-2xl font-bold text-[var(--morning-blue)]" id="employeesCount">--</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow text-center">
-          <h3 class="text-sm text-gray-500">Present Today</h3>
-          <p class="text-2xl font-bold text-green-500" id="presentCount">--</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow text-center">
-          <h3 class="text-sm text-gray-500">Late Employees</h3>
-          <p class="text-2xl font-bold text-yellow-500" id="lateCount">--</p>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow text-center">
-          <h3 class="text-sm text-gray-500">Pending Leave Requests</h3>
-          <p class="text-2xl font-bold text-yellow-500" id="requestCount">--</p>
-        </div>
-      </div>
+        <div class="flex-1" id="top-nav"></div>
+      </header>
 
-      <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-[var(--text-primary)]">Shift Overview</h2>
-        <div class="flex gap-2 items-center">
-          <input type="month" id="monthPicker" class="border border-gray-300 rounded-lg px-3 py-2" />
+      <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-[var(--bg-light)]">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6 mb-4 md:mb-6 py-2 md:py-4" id="summary-cards">
+          <div class="bg-white p-3 md:p-4 rounded-xl shadow text-center flex flex-col items-center justify-center stat-card">
+            <h3 class="text-xs md:text-sm text-gray-500">Total Employees</h3>
+            <p class="text-2xl md:text-3xl font-bold text-[var(--morning-blue)]" id="employeesCount">--</p>
+          </div>
+          <div class="bg-white p-3 md:p-4 rounded-xl shadow text-center flex flex-col items-center justify-center stat-card">
+            <h3 class="text-xs md:text-sm text-gray-500">Present Today</h3>
+            <p class="text-2xl md:text-3xl font-bold text-green-500" id="presentCount">--</p>
+          </div>
+          <div class="bg-white p-3 md:p-4 rounded-xl shadow text-center flex flex-col items-center justify-center stat-card">
+            <h3 class="text-xs md:text-sm text-gray-500">Late Employees</h3>
+            <p class="text-2xl md:text-3xl font-bold text-yellow-500" id="lateCount">--</p>
+          </div>
+          <div class="bg-white p-3 md:p-4 rounded-xl shadow text-center flex flex-col items-center justify-center stat-card">
+            <h3 class="text-xs md:text-sm text-gray-500">Pending Leave Requests</h3>
+            <p class="text-2xl md:text-3xl font-bold text-yellow-500" id="requestCount">--</p>
+          </div>
+          <div class="bg-white p-3 md:p-4 rounded-xl shadow text-center stat-card flex flex-col items-center justify-center gap-2" id="attendance-card">
+            <h3 class="text-xs md:text-sm text-gray-500 font-bold">Today Attendance</h3>
+          </div>
         </div>
-      </div>
-      <div class="w-full p-2 rounded-lg overflow-y-auto grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4" id="shiftList">
 
-      </div>  
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-3">
+          <h2 class="text-base md:text-lg font-semibold text-[var(--text-primary)]">Shift Overview</h2>
+          <div class="flex gap-2 items-center w-full sm:w-auto">
+            <input type="month" id="monthPicker" class="border border-gray-300 rounded-lg px-3 py-2 text-sm md:text-base w-full sm:w-auto" />
+          </div>
+        </div>
+        
+        <div class="w-full p-2 rounded-lg overflow-y-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4" id="shiftList">
+          <!-- Shifts will be loaded here -->
+        </div>  
       </main>
     </div>
 
     <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        topNav();
-        navbarSide();
+      // Hamburger menu functionality
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar-container");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+      function toggleSidebar() {
+        sidebar.classList.toggle("active");
+        sidebarOverlay.classList.toggle("active");
+        hamburgerBtn.querySelector(".hamburger").classList.toggle("active");
+
+        if (sidebar.classList.contains("active")) {
+          document.body.style.overflow = "hidden";
+        } else {
+          document.body.style.overflow = "";
+        }
+      }
+
+      hamburgerBtn.addEventListener("click", toggleSidebar);
+      sidebarOverlay.addEventListener("click", toggleSidebar);
+
+      sidebar.addEventListener("click", (e) => {
+        if (e.target.tagName === "A" && window.innerWidth < 768) {
+          toggleSidebar();
+        }
+      });
+
+      window.addEventListener("resize", () => {
+        if (window.innerWidth >= 768 && sidebar.classList.contains("active")) {
+          toggleSidebar();
+        }
+      });
+
+      // Main initialization
+      document.addEventListener("DOMContentLoaded", async () => {
+        try {
+          topNav();
+          navbarSide();
+          
+          const user = await currentUser();
+          console.log("Current user:", user);
+          
+          await fetchEmployees();
+          renderEmployee();
+          await renderSchedule();
+          
+        } catch(error) {
+          console.error("❌ Unexpected error in DOMContentLoaded:", error);
+          webix.message({ type: "error", text: "Failed to initialize page" });
+        }
       });
     </script>
   </body>

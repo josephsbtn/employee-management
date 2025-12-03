@@ -21,11 +21,15 @@ def index():
     """
     try:
         token = request.cookies.get("token")
-        if token:
+        print("TOKEN:", token)
+        if token != "" and token != None:
+            print("TOKEN:", token)
             currentUser = SessionService().validateToken(token)
             print("CURRENT USER:", currentUser)
             if currentUser["status"] == False:
-                return render_template("authPage.html")
+                response = make_response(render_template("notHaveAccess.html"), 403)
+                response.set_cookie("token", "", expires=0)
+                return response
             return redirect("/dashboard")
         return render_template("authPage.html")
     except Exception as e:
@@ -43,8 +47,8 @@ def dashboard():
         token = request.cookies.get("token")
         currentUser = SessionService().checkAccess(["owner", "manager", "employee"], token)
         print("CURRENT USER:", currentUser)
-        if currentUser['status'] == False:
-            return render_template("notHaveAccess.html")
+        if currentUser["status"] == False:
+                return redirect("/notHaveAccess")
         role = currentUser['data']['role']
         print("[INFO] Role:", role)
         print("CURRENT USER:", currentUser)
@@ -68,8 +72,8 @@ def employee():
         token = request.cookies.get("token")
         currentUser = SessionService().checkAccess(["owner", "manager", "employee"], token)
         print("CURRENT USER:", currentUser)
-        if currentUser['status'] == False:
-            return render_template("notHaveAccess.html")
+        if currentUser["status"] == False:
+                return redirect("/notHaveAccess")
         role = currentUser['data']['role']
 
         if role == "owner" or role == "manager":
@@ -85,8 +89,8 @@ def profile():
         token = request.cookies.get("token")
         currentUser = SessionService().checkAccess(["owner", "manager", "employee"], token)
         print("CURRENT USER:", currentUser)
-        if currentUser['status'] == False:
-            return render_template("notHaveAccess.html")
+        if currentUser["status"] == False:
+                return redirect("/notHaveAccess")
         return render_template("profileUser.html")
     except Exception as e:
         return jsonify({"message": "error", "error": str(e)}), 500

@@ -23,3 +23,16 @@ def annualRequest():
         return render_template("manager/leaveRequestManage.html")
     except Exception as e:
         return redirect("/")
+    
+@ManagerPageBp.route("/history", methods=["GET"])
+def history():
+    try:
+        token = request.cookies.get("token")
+        currentUser = SessionService().checkAccess(["manager"], token)
+        if currentUser['status'] == False:
+            return redirect("/notHaveAccess")
+        return render_template("employee/attendanceHistory.html")
+    except Exception as e:
+        return redirect("/")
+
+

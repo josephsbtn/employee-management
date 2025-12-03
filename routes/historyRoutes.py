@@ -11,10 +11,9 @@ def getAllHistory():
     token = request.cookies.get("token")
     currentUser = session.checkAccess(["owner"], token)
     print("CURRENT USER:", currentUser)
-    if currentUser['status'] == False:
-        response = make_response(redirect("/notHaveAccess"))
-        response.delete_cookie("token")
-        return redirect("/notHaveAccess")
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     data = service.getAllHistory()
     return jsonify(data), 200
 
@@ -23,10 +22,9 @@ def getUserHistory():
     print("-----------[GET USER HISTORY]-----------")
     token = request.cookies.get("token")
     currentUser = session.checkAccess(["owner", "manager", "employee"], token)
-    if currentUser['status'] == False:
-        response = make_response(redirect("/notHaveAccess"))
-        response.delete_cookie("token")
-        return redirect("/notHaveAccess")
+    if currentUser["status"] == False:
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     print("OTW KE SERVICE")
     data = service.getUserHistory(currentUser["data"]["_id"])
     return jsonify(data), 200

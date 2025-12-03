@@ -206,7 +206,7 @@
           <div class="space-y-3">
             <div class="flex justify-between items-center">
               <span class="text-gray-600">${data.role === "owner" ? "Total Team Members" : "Annual Leave Balance"}</span>
-              <span class="font-semibold text-gray-800">${data.role === "owner" ? (data.branch?.employees?.length || 0) : (data.annualLeaveBalance || 0)}</span>
+              <span class="font-semibold text-gray-800">${data.role === "owner" ? (data.totalEmployee || 0) : (data.annualLeaveBalance || 0)}</span>
             </div>
             <div class="flex justify-between items-center">
               <span class="text-gray-600">Join Date</span>
@@ -265,7 +265,7 @@
         }
 
         const teamCount = data.branch?.employees?.length || 0;
-        if (teamCount > 0 || data.branch) {
+        if (teamCount > 0 || data.branch && data.role !== "owner") {
           console.log("teamCount", teamCount);
           branchContainer.classList.remove("hidden");
           branchContainer.innerHTML = branchInformation(data);

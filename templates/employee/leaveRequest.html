@@ -238,10 +238,12 @@
               };
             }
             if (response?.data?.errors) {
+              isRequested = false;
               Object.entries(err.response.data.errors).forEach(([key, value]) => {
                 $$("requestForm").markInvalid(key, Array.isArray(value) ? value.join(", ") : value);
               });
             } else {
+              isRequested = false;
               webix.alert({
                 title: "Something went wrong!",
                 type: "alert-error",
@@ -302,7 +304,7 @@
           width: 700,
           position: "center",
           modal: true,
-          head: "Annual Leave Request",
+          head: "Leave Request",
           body: {
             view: "form",
             id: "requestForm",

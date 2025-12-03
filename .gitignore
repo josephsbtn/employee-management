@@ -7,4 +7,3 @@ utils/__pycache__
 service/__pycache__
 routes/page/__pycache__
 test.py
-.env

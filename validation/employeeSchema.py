@@ -197,6 +197,7 @@ class EmployeeSchema(Schema):
     
     annualLeaveBalance = fields.Int(load_default=13, validate=validate.Range(min=0, max=13))
     workDays = fields.Int(load_default=0)
+    lateDays = fields.Int(load_default=0)
     branchId = fields.Str(
         required=True,
         error_messages={"required": "Branch ID is required."}

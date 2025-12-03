@@ -72,7 +72,7 @@
         try {
           if (branches.length > 0) return branches;
           
-          const res = await axios.get("/api/branch");
+          const res = await axios.get("/api/branch/active");
           console.log("RES DATA BRANCH :", res.data.data);
           
           branches = res.data.data;
@@ -112,8 +112,8 @@
       document.addEventListener("DOMContentLoaded", async () => {
         topNav();
         await loadBranch();
-        console.log("branches", branches);
-        navbarSide(pagesAdmin);
+        navbarSide();
+        let currentUser = null
         
         let edit = false;
 
@@ -140,6 +140,7 @@
                   onClick: {
                     addEmployeeBtn: async function () {
                       console.log("Add Employee Clicked");
+                      
                       edit = false;
                       
                       const form = $$("employeeForm");
@@ -157,7 +158,6 @@
                       branchCombo.refresh();
 
                       if (branches.length === 1) {
-                        branchCombo.disable();
                         form.setValues({ branchId: branches[0]._id });
                       } else {
                         branchCombo.enable();
@@ -304,7 +304,7 @@
                 },
                 {
                   id: "role",
-                  header: "Role",
+                  header: { text: "Role", css: "text-center" },
                   fillspace: true,
                   css: "text-center text-sm",
                   template: (obj) =>
@@ -314,7 +314,7 @@
                 },
                 {
                   id: "actions",
-                  header: "Actions",
+                  header: { text: "Actions", css: "text-center" },
                   width: 250,
                   css: "text-center text-sm",
                   template: (obj) => {
@@ -323,10 +323,7 @@
                         ${obj.role !== "owner" ? 
                         `<button class="editBtn px-3 py-1.5 rounded-lg text-sm font-medium text-[var(--text-secondary)] hover:text-white hover:bg-[var(--calm-blue)] transition duration-150">
                           ✏️ Edit
-                        </button>`
-                        : ""
-                        }
-                        
+                        </button>
                         ${
                           obj.status === "active"
                             ? `<button class="statusBtn bg-[var(--sunrise-red)] px-3 py-1.5 rounded-lg text-sm font-medium text-white hover:bg-orange-500 transition-all duration-150">
@@ -335,7 +332,10 @@
                             : `<button class="statusBtn bg-[var(--calm-blue)] px-3 py-1.5 rounded-lg text-sm font-medium text-white hover:bg-green-500 transition-all duration-150">
                                 🙎‍♂️ Activate
                               </button>`
+                        }`
+                        : ""
                         }
+                      
                       </div>
                     `;
                   },
@@ -363,10 +363,10 @@
                       branchId: value.branch?._id || value.branchId,
                     };
 
-                    if (loadedBranches.length === 1) {
-                      branchCombo.disable();
+                    if (branches.length === 1) {
+                        form.setValues({ branchId: branches[0]._id });
                     } else {
-                      branchCombo.enable();
+                        branchCombo.enable();
                     }
 
                     form.setValues(formValues);

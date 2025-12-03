@@ -1,7 +1,51 @@
-from flask import Blueprint, render_template, request, redirect, jsonify
+from flask import Blueprint, render_template, request, redirect, jsonify, make_response
 from service.storeService import StoreService
 from utils.jwtHandler import SessionService
 from utils.utility import Utility
+
+"""
+=================================================================================
+BRANCH/STORE MANAGEMENT API - DOKUMENTASI
+=================================================================================
+
+MODULE: Manajemen Cabang/Toko (CRUD + Aktivasi/Deaktivasi)
+
+AUTENTIKASI:
+- Semua endpoint memerlukan JWT token di cookies
+- Validasi menggunakan SessionService.checkAccess()
+
+AUTHORIZATION:
+- Owner: Akses penuh semua operasi cabang
+- Manager: Hanya bisa melihat cabang sendiri (list active)
+- Employee: Hanya bisa melihat daftar cabang
+
+KEAMANAN:
+- ID parameter disanitasi (blockMongoInject, sanitizeHTML)
+- Validasi token setiap request
+- Error 403 untuk akses tidak sah, 400 untuk request invalid
+
+ENDPOINTS:
+1. GET    /                → Daftar semua cabang
+2. GET    /<id>            → Detail cabang berdasarkan ID
+3. POST   /create          → Tambah cabang baru
+4. PUT    /update/<id>     → Update data cabang
+5. DELETE /delete/<id>     → Hapus cabang permanen
+6. PUT    /non-active/<id> → Nonaktifkan cabang
+7. PUT    /active/<id>     → Aktifkan kembali cabang
+8. GET    /active          → Daftar cabang aktif saja
+
+FORMAT RESPONSE:
+Success: {"status": true, "message": "...", "data": {...}}
+Error:   {"status": false, "message": "..."}
+
+NOTES:
+- Manager hanya bisa melihat cabangnya sendiri di endpoint /active
+- Owner bisa melihat semua cabang
+- Soft delete menggunakan endpoint /non-active (recommended)
+- Hard delete menggunakan endpoint /delete (permanent)
+
+=================================================================================
+"""
 
 branchRoutesBp = Blueprint("branchRoutesBp", __name__)
 session = SessionService()
@@ -9,14 +53,13 @@ service = StoreService()
 utility = Utility()
 @branchRoutesBp.route("", methods=["GET"])
 def branch():
-    
     token = request.cookies.get("token")
     print("-------------CURRENT USER IN BRANCHES-------:")
     currentUser = session.checkAccess(["owner", "manager", "employee"], token)
     if currentUser['status'] == False:
-        return redirect("/notHaveAccess")
-    if currentUser["data"]["role"] == "manager":
-        return jsonify({"status": True, "message": "Manager Branch", "data" : [{"branchId": currentUser["data"]["branchId"]}]}), 200
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
+   
     data = service.getAllStore()
     print("[INFO] Data:", data)
     return jsonify(data), 200
@@ -28,7 +71,8 @@ def branchById(id):
     currentUser = session.checkAccess(["owner"], token)
     print("CURRENT USER:", currentUser)
     if currentUser['status'] == False:
-        return  redirect("/notHaveAccess")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
     
     utility.blockMongoInject(id)
     sanitizedId = utility.sanitizeHTML(id)
@@ -44,7 +88,9 @@ def createBranch():
     currentUser = session.checkAccess(["owner"], token)
     print("CURRENT USER:", currentUser)
     if currentUser['status'] == False:
-        return redirect("notHaveAccess.html")
+        response = make_response(jsonify({"status": False, "message": "You don't have access"}), 403)
+        return response
+    
     data = request.get_json()
     
     if not data:
@@ -101,4 +147,23 @@ def activeBranch(id):
         return  redirect("/notHaveAccess")
     result = service.ActivateStore(id, employee=currentUser["data"])
     print("[INFO] Result:", result), 
+    return jsonify(result), 200
+
+@branchRoutesBp.route("/active", methods=["GET"])
+def listActiveBranch():
+    token = request.cookies.get("token")
+    currentUser = session.checkAccess(["owner", "manager"], token)
+    print("CURRENT USER:", currentUser)
+    if currentUser['status'] == False:
+        return  redirect("/notHaveAccess")
+    result = service.getActiveStore()
+    if currentUser["data"]["role"] == "manager":
+        managerstore = None
+        for store in result["data"]:
+            if store["_id"] == currentUser["data"]["branchId"]:
+                managerstore = store
+                break
+            
+        return jsonify({"status": True, "message": "Manager Branch", "data" : [managerstore]}), 200
+    print("[==== INFO ====] Result:", result), 
     return jsonify(result), 200

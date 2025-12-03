@@ -67,7 +67,7 @@ const renderEmployee = () => {
   if (!list) return;
 
   if (employees.length === 0) {
-    list.innerHTML = `<p class="text-gray-500 text-center py-4">No employees found.</p>`;
+    list.innerHTML = `<p class="text-gray-500 text-center py-4 text-sm">No employees found.</p>`;
     return;
   }
 
@@ -80,17 +80,17 @@ const renderEmployee = () => {
             id="userMenuButton-${i}"
           >
             <div class="flex items-center space-x-2">
-              <div class="w-8 h-8 rounded-full bg-[var(--sunrise-red)] shadow-md flex items-center justify-center text-white font-semibold">
+              <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--sunrise-red)] shadow-md flex items-center justify-center text-white font-semibold text-sm">
                 ${user.name.charAt(0).toUpperCase()}
               </div>
-              <span class="hidden md:block text-sm font-medium text-[var(--text-primary)]">${
+              <span class="text-xs md:text-sm font-medium text-[var(--text-primary)] truncate">${
                 user.name
               }</span>
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" md:width="16" md:height="16"
               viewBox="0 0 24 24" fill="none" stroke="currentColor"
               stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-              class="text-[var(--text-secondary)]">
+              class="text-[var(--text-secondary)] flex-shrink-0">
               <polyline points="6 9 12 15 18 9"></polyline>
             </svg>
           </button>
@@ -101,14 +101,14 @@ const renderEmployee = () => {
           >
             <a href="#" onclick="setShift('${
               user._id
-            }', 'Day')" class="block px-4 py-2 text-sm text-blue-600 hover:bg-gray-100 flex items-center space-x-2">
-              <img src="/static/photo/day.svg" alt="Day" class="w-4 h-4">
+            }', 'Day')" class="block px-3 md:px-4 py-2 text-xs md:text-sm text-blue-600 hover:bg-gray-100 flex items-center space-x-2">
+              <img src="/static/photo/day.svg" alt="Day" class="w-3 h-3 md:w-4 md:h-4">
               <span>Set Day Shift</span>
             </a>
             <a href="#" onclick="setShift('${
               user._id
-            }', 'Night')" class="block px-4 py-2 text-sm text-purple-600 hover:bg-gray-100 flex items-center space-x-2">
-              <img src="/static/photo/night.svg" alt="Night" class="w-4 h-4">
+            }', 'Night')" class="block px-3 md:px-4 py-2 text-xs md:text-sm text-purple-600 hover:bg-gray-100 flex items-center space-x-2">
+              <img src="/static/photo/night.svg" alt="Night" class="w-3 h-3 md:w-4 md:h-4">
               <span>Set Night Shift</span>
             </a>
           </div>
@@ -177,27 +177,29 @@ function renderDayShift() {
   if (!container) return;
 
   if (dayShift.length === 0) {
-    container.innerHTML = `<p class="text-gray-500 text-center py-4">No employees in day shift.</p>`;
+    container.innerHTML = `<p class="text-gray-500 text-center py-4 text-sm">No employees in day shift.</p>`;
     return;
   }
 
   container.innerHTML = dayShift
     .map(
       (emp) => `
-      <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg w-full">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 bg-gray-50 rounded-lg w-full gap-2">
         <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-full bg-[var(--morning-blue)] flex items-center justify-center text-white font-semibold">
+          <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--morning-blue)] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
             ${emp.name.charAt(0).toUpperCase()}
           </div>
-          <span class="text-sm font-medium">${emp.name}</span>
+          <span class="text-xs md:text-sm font-medium truncate">${
+            emp.name
+          }</span>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex space-x-2 w-full sm:w-auto justify-end">
           <button onclick="setShift('${
             emp.employeeId
-          }', 'Night')" class="text-purple-600 hover:underline text-sm">Switch → 🌑</button>
+          }', 'Night')" class="text-purple-600 hover:underline text-xs md:text-sm whitespace-nowrap">Switch → 🌑</button>
           <button onclick="deleteShift('${
             emp.employeeId
-          }')" class="text-red-600 hover:underline text-sm">Delete</button>
+          }')" class="text-red-600 hover:underline text-xs md:text-sm whitespace-nowrap">Delete</button>
         </div>
       </div>
     `
@@ -210,27 +212,29 @@ function renderNightShift() {
   if (!container) return;
 
   if (nightShift.length === 0) {
-    container.innerHTML = `<p class="text-gray-500 text-center py-4">No employees in night shift.</p>`;
+    container.innerHTML = `<p class="text-gray-500 text-center py-4 text-sm">No employees in night shift.</p>`;
     return;
   }
 
   container.innerHTML = nightShift
     .map(
       (emp) => `
-      <div class="flex justify-between items-center p-2 bg-gray-50 rounded-lg w-full">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-2 bg-gray-50 rounded-lg w-full gap-2">
         <div class="flex items-center space-x-2">
-          <div class="w-8 h-8 rounded-full bg-[var(--sunrise-red)] flex items-center justify-center text-white font-semibold">
+          <div class="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[var(--sunrise-red)] flex items-center justify-center text-white font-semibold text-sm flex-shrink-0">
             ${emp.name.charAt(0).toUpperCase()}
           </div>
-          <span class="text-sm font-medium">${emp.name}</span>
+          <span class="text-xs md:text-sm font-medium truncate">${
+            emp.name
+          }</span>
         </div>
-        <div class="flex space-x-2">
+        <div class="flex space-x-2 w-full sm:w-auto justify-end">
           <button onclick="setShift('${
             emp.employeeId
-          }', 'Day')" class="text-blue-600 hover:underline text-sm">Switch → ☀️</button>
+          }', 'Day')" class="text-blue-600 hover:underline text-xs md:text-sm whitespace-nowrap">Switch → ☀️</button>
           <button onclick="deleteShift('${
             emp.employeeId
-          }')" class="text-red-600 hover:underline text-sm">Delete</button>
+          }')" class="text-red-600 hover:underline text-xs md:text-sm whitespace-nowrap">Delete</button>
         </div>
       </div>
     `
@@ -315,7 +319,7 @@ async function submitShift() {
     webix.message({ type: "success", text: "Shift assigned successfully!" });
     await loadShiftByDate(selectedDate);
   } catch (error) {
-    console.error("❌ Error submitting shift:", error);
+    console.error("❌ Error submitting shift:", error.response.data.message);
     webix.message({ type: "error", text: "Failed to submit shift" });
   }
 }
@@ -325,16 +329,21 @@ const renderSubmit = () => {
   if (!makeShiftBtn) return;
 
   makeShiftBtn.innerHTML = `
-  <div>
-  <p>Schedule Shift : ${selectedDate || "-"} | Day : ${
-    dayShift.length
-  } | Night : ${nightShift.length}</p>
-   ${idShift ? `` : ""}</div>
+  <div class="text-xs md:text-sm">
+    <p class="font-medium">Schedule Shift: <span class="font-bold">${
+      selectedDate || "-"
+    }</span></p>
+    <p class="text-gray-600">Day: <span class="text-blue-600 font-semibold">${
+      dayShift.length
+    }</span> | Night: <span class="text-purple-600 font-semibold">${
+    nightShift.length
+  }</span></p>
+  </div>
   
   ${
     idShift
-      ? `<button class="gradient-btn text-white font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-sm" onclick="updateShift()">Update Shift</button>`
-      : `<button class="gradient-btn text-white font-semibold px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-sm" onclick="submitShift()">Save Shift</button>`
+      ? `<button class="gradient-btn text-white font-semibold px-3 md:px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-sm text-sm md:text-base whitespace-nowrap" onclick="updateShift()">Update Shift</button>`
+      : `<button class="gradient-btn text-white font-semibold px-3 md:px-4 py-2 rounded-xl hover:opacity-90 transition-all shadow-sm text-sm md:text-base whitespace-nowrap" onclick="submitShift()">Save Shift</button>`
   }
   `;
 };
