@@ -1,11 +1,34 @@
 Flask
 pymongo
 Flask-JWT-Extended
+pendulum
+bleach
 marshmallow
 Werkzeug
 python-dotenv
 bcrypt
+
+#build
 gunicorn
 eventlet
-pendulum
-bleach
+
+# Testing
+pytest
+pytest-cov
+pytest-mock
+mongomock
+
+# Optional tapi sangat direkomendasikan
+factory-boy
+
+# Static analysis / security
+flake8
+mypy
+bandit
+
+# Mutation testing
+mutmut
+pytest-asyncio
+
+# Coverage reporting
+coverage

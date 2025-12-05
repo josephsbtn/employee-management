@@ -1,0 +1,414 @@
+"""
+====================================================================
+WHITEBOX TESTING STRUCTURE - EMPLOYEE MANAGEMENT SYSTEM
+====================================================================
+
+Struktur Folder Testing:
+------------------------
+employee-management/
+├── test/
+│   ├── __init__.py
+│   ├── conftest.py                      # Shared fixtures & mocks
+│   │
+│   ├── unit/                            # Unit tests (isolated)
+│   │   ├── __init__.py
+│   │   ├── test_employee_service.py
+│   │   ├── test_history_service.py
+│   │   ├── test_leave_request_service.py
+│   │   ├── test_store_service.py
+│   │   └── test_attendance_service.py
+│   │
+│   └── integration/                     # Integration tests
+│       ├── __init__.py
+│       ├── test_employee_routes.py
+│       ├── test_attendance_routes.py
+│       └── test_leave_request_routes.py
+│
+├── pytest.ini
+└── requirements-test.txt
+
+====================================================================
+"""
+
+# ====================================================================
+# FILE: test/conftest.py
+# ====================================================================
+"""
+Shared fixtures untuk semua test files.
+Ini adalah jantung dari testing - semua mock dan setup ada di sini.
+"""
+
+import pytest
+from unittest.mock import Mock, MagicMock, patch
+import pendulum
+from mongomock import MongoClient
+
+@pytest.fixture
+def mock_mongo_client():
+    """Mock MongoDB client menggunakan mongomock"""
+    client = MongoClient()
+    db = client['test_db']
+    return db
+
+@pytest.fixture
+def mock_employee_repo(mock_mongo_client):
+    """Mock EmployeeRepo dengan mongomock"""
+    with patch('repo.EmployeeRepo.EmployeeRepo') as mock:
+        mock_instance = mock.return_value
+        mock_instance.collection = mock_mongo_client['employees']
+        yield mock_instance
+
+@pytest.fixture
+def mock_history_repo(mock_mongo_client):
+    """Mock HistoryRepo"""
+    with patch('repo.historyRepo.HistoryRepo') as mock:
+        mock_instance = mock.return_value
+        mock_instance.collection = mock_mongo_client['history']
+        yield mock_instance
+
+@pytest.fixture
+def mock_store_repo(mock_mongo_client):
+    """Mock StoreRepo"""
+    with patch('repo.storeRepo.StoreRepo') as mock:
+        mock_instance = mock.return_value
+        mock_instance.collection = mock_mongo_client['stores']
+        yield mock_instance
+
+@pytest.fixture
+def mock_attendance_repo(mock_mongo_client):
+    """Mock AttendanceRepo"""
+    with patch('repo.attendanceRepo.AttendanceRepo') as mock:
+        mock_instance = mock.return_value
+        mock_instance.collection = mock_mongo_client['attendance']
+        yield mock_instance
+
+@pytest.fixture
+def sample_employee():
+    """Sample employee data untuk testing"""
+    return {
+        "_id": "EMP_TEST123",
+        "name": "John Doe",
+        "email": "john@test.com",
+        "password": b"$2b$12$hashed_password",
+        "role": "employee",
+        "status": "active",
+        "branchId": "STR_TEST001",
+        "salary": 5000000,
+        "annualLeaveBalance": 12,
+        "createdAt": pendulum.now("Asia/Jakarta").to_iso8601_string()
+    }
+
+@pytest.fixture
+def sample_manager():
+    """Sample manager data"""
+    return {
+        "_id": "EMP_MGR001",
+        "name": "Manager Test",
+        "email": "manager@test.com",
+        "password": b"$2b$12$hashed_password",
+        "role": "manager",
+        "status": "active",
+        "branchId": "STR_TEST001",
+        "salary": 8000000,
+        "annualLeaveBalance": 15,
+        "createdAt": pendulum.now("Asia/Jakarta").to_iso8601_string()
+    }
+
+@pytest.fixture
+def sample_store():
+    """Sample store data"""
+    return {
+        "_id": "STR_TEST001",
+        "name": "Test Store",
+        "address": "Jl. Test No. 123",
+        "status": "active",
+        "geometry": {
+            "type": "Point",
+            "coordinates": [110.3695, -7.7956]
+        }
+    }
+
+@pytest.fixture
+def mock_bcrypt():
+    """Mock bcrypt untuk password hashing"""
+    with patch('bcrypt.hashpw') as hash_mock, \
+         patch('bcrypt.gensalt') as salt_mock, \
+         patch('bcrypt.checkpw') as check_mock:
+        
+        salt_mock.return_value = b'$2b$12$test_salt'
+        hash_mock.return_value = b'$2b$12$hashed_password'
+        check_mock.return_value = True
+        
+        yield {
+            'hashpw': hash_mock,
+            'gensalt': salt_mock,
+            'checkpw': check_mock
+        }
+
+@pytest.fixture
+def mock_jwt():
+    """Mock JWT token generation"""
+    with patch('utils.jwtHandler.SessionService.createToken') as mock:
+        mock.return_value = "mock_jwt_token_12345"
+        yield mock
+
+
+# ====================================================================
+# FILE: test/unit/test_employee_service.py
+# ====================================================================
+"""
+Unit Testing untuk EmployeeService
+Fokus: Business logic, validasi, dan semua code paths
+"""
+
+import pytest
+from unittest.mock import Mock, patch, MagicMock
+from marshmallow import ValidationError
+from service.employeeService import EmployeeService
+
+class TestEmployeeServiceGetAll:
+    """Test getAllEmployee method - berbagai path"""
+    
+    def test_get_all_employees_success(self, mock_employee_repo, mock_store_repo, sample_employee):
+        """Path: Successfully fetch all employees"""
+        # Setup
+        mock_employee_repo.getAllData.return_value = [sample_employee]
+        mock_store_repo.getDataById.return_value = {"_id": "STR_TEST001", "name": "Test Store"}
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        service.repoBranch = mock_store_repo
+        result = service.getAllEmployee()
+        
+        # Assert
+        assert result["status"] == True
+        assert len(result["data"]) == 1
+        assert result["data"][0]["name"] == "John Doe"
+        assert "branch" in result["data"][0]
+    
+    def test_get_all_employees_with_branch_filter(self, mock_employee_repo, mock_store_repo, sample_employee):
+        """Path: Filter by branchId"""
+        # Setup
+        mock_employee_repo.getAllData.return_value = [sample_employee]
+        mock_store_repo.getDataById.return_value = {"_id": "STR_TEST001", "name": "Test Store"}
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        service.repoBranch = mock_store_repo
+        result = service.getAllEmployee(branchId="STR_TEST001")
+        
+        # Assert
+        assert result["status"] == True
+        mock_employee_repo.getAllData.assert_called_once()
+        call_args = mock_employee_repo.getAllData.call_args
+        assert "query" in call_args[1] or call_args[0]
+    
+    def test_get_all_employees_empty_list(self, mock_employee_repo):
+        """Path: No employees found"""
+        # Setup
+        mock_employee_repo.getAllData.return_value = []
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        result = service.getAllEmployee()
+        
+        # Assert
+        assert result["status"] == True
+        assert result["data"] == []
+    
+    def test_get_all_employees_exception(self, mock_employee_repo):
+        """Path: Exception during fetch"""
+        # Setup
+        mock_employee_repo.getAllData.side_effect = Exception("Database error")
+        
+        # Execute & Assert
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        with pytest.raises(Exception, match="Failed to get data"):
+            service.getAllEmployee()
+
+
+class TestEmployeeServiceCreate:
+    """Test newEmployee method - semua branches"""
+    
+    def test_create_employee_success(self, mock_employee_repo, mock_bcrypt, sample_employee):
+        """Path: Successfully create employee"""
+        # Setup
+        mock_employee_repo.getData.return_value = None  # Email not used
+        mock_employee_repo.getAllData.return_value = []  # No existing managers
+        mock_result = Mock()
+        mock_result.acknowledged = True
+        mock_result.inserted_id = "EMP_NEW123"
+        mock_employee_repo.insertData.return_value = mock_result
+        
+        with patch('service.historyService.HistoryService.createHistory') as mock_history:
+            mock_history.return_value = {"status": True}
+            
+            # Execute
+            service = EmployeeService()
+            service.repo = mock_employee_repo
+            
+            new_employee_data = {
+                "name": "New Employee",
+                "email": "new@test.com",
+                "password": "password123",
+                "role": "employee",
+                "branchId": "STR_TEST001",
+                "salary": 4000000
+            }
+            
+            result = service.newEmployee(new_employee_data, sample_employee)
+            
+            # Assert
+            assert result["status"] == True
+            assert result["message"] == "Data inserted successfully"
+            assert mock_employee_repo.insertData.called
+    
+    def test_create_employee_email_already_used(self, mock_employee_repo, sample_employee):
+        """Path: Email already exists"""
+        # Setup
+        mock_employee_repo.getData.return_value = sample_employee
+        mock_employee_repo.getAllData.return_value = []
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        
+        new_employee_data = {
+            "name": "New Employee",
+            "email": "john@test.com",  # Email already used
+            "password": "password123",
+            "role": "employee",
+            "branchId": "STR_TEST001",
+            "salary": 4000000
+        }
+        
+        result = service.newEmployee(new_employee_data, sample_employee)
+        
+        # Assert
+        assert result["status"] == False
+        assert result["message"] == "Email already used"
+    
+    def test_create_manager_branch_already_has_manager(self, mock_employee_repo, sample_manager):
+        """Path: Branch already has a manager"""
+        # Setup
+        mock_employee_repo.getData.return_value = None
+        mock_employee_repo.getAllData.return_value = [sample_manager]  # Existing manager
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        
+        new_manager_data = {
+            "name": "New Manager",
+            "email": "newmanager@test.com",
+            "password": "password123",
+            "role": "manager",
+            "branchId": "STR_TEST001",
+            "salary": 8000000
+        }
+        
+        result = service.newEmployee(new_manager_data, sample_manager)
+        
+        # Assert
+        assert result["status"] == False
+        assert "already has" in result["message"]
+    
+    def test_create_employee_branch_full(self, mock_employee_repo, sample_employee):
+        """Path: Branch already has 6 employees"""
+        # Setup
+        mock_employee_repo.getData.return_value = None
+        # Return 6 existing employees
+        existing_employees = [sample_employee.copy() for _ in range(6)]
+        mock_employee_repo.getAllData.return_value = existing_employees
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        
+        new_employee_data = {
+            "name": "New Employee",
+            "email": "new@test.com",
+            "password": "password123",
+            "role": "employee",
+            "branchId": "STR_TEST001",
+            "salary": 4000000
+        }
+        
+        result = service.newEmployee(new_employee_data, sample_employee)
+        
+        # Assert
+        assert result["status"] == False
+        assert "already has 6 employees" in result["message"]
+    
+    def test_create_employee_validation_error(self, mock_employee_repo):
+        """Path: Validation error"""
+        # Setup
+        mock_employee_repo.getData.return_value = None
+        mock_employee_repo.getAllData.return_value = []
+        
+        # Execute & Assert
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        
+        invalid_data = {
+            "name": "",  # Invalid empty name
+            "email": "invalid",
+            "password": "123"
+        }
+        
+        with pytest.raises(ValidationError):
+            service.newEmployee(invalid_data, {"_id": "EMP_001", "name": "Test"})
+
+
+class TestEmployeeServiceLogin:
+    """Test login method - semua authentication paths"""
+    
+    def test_login_success(self, mock_employee_repo, mock_bcrypt, mock_jwt, sample_employee):
+        """Path: Successful login"""
+        # Setup
+        mock_employee_repo.getData.return_value = sample_employee
+        
+        with patch('service.historyService.HistoryService.createHistory') as mock_history:
+            mock_history.return_value = {"status": True}
+            
+            # Execute
+            service = EmployeeService()
+            service.repo = mock_employee_repo
+            
+            login_data = {
+                "email": "john@test.com",
+                "password": "password123"
+            }
+            
+            result = service.login(login_data)
+            
+            # Assert
+            assert result["status"] == True
+            assert "token" in result
+            assert result["token"] == "mock_jwt_token_12345"
+    
+    def test_login_email_not_found(self, mock_employee_repo):
+        """Path: Email not found"""
+        # Setup
+        mock_employee_repo.getData.return_value = None
+        
+        # Execute
+        service = EmployeeService()
+        service.repo = mock_employee_repo
+        
+        login_data = {
+            "email": "notfound@test.com",
+            "password": "password123"
+        }
+        
+        result = service.login(login_data)
+        
+        # Assert
+        assert result["status"] == False
+        assert result["message"] == "Email not found"
+    
+    def test_login_invalid_password(self, mock_employee_repo, sample_employee):

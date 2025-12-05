@@ -225,7 +225,7 @@ class LoginSchema(Schema):
         error_messages={"required": "Email is required."}
     )
     password = fields.Str(
-        required=False,
+        required=True,
         validate=validate.Length(min=8),
         error_messages={"required": "Password is required."}
     )

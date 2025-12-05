@@ -36,6 +36,7 @@ class EmployeeService():
         self.attendanceService = AttendanceService()
         self.branchService = StoreService()
         self.repoBranch = StoreRepo()
+        self.historyService = HistoryService()  
     def getAllEmployee(self, branchId = None):
         """
         Mengambil semua data employee dari database.
@@ -207,6 +208,7 @@ class EmployeeService():
             print("[MASUK SERVICE NEW EMPLOYEE]", data)
             id = "EMP_"+str(random.randint(10, 99))+pendulum.now(tz="Asia/Jakarta").strftime("%Y%m%d%H%M%S")
             print("[DATA EMPLOYEE MASUK]", data)
+
             validateData = self.createdSchema.load(data)
             if validateData["role"] == "manager":
                 managers = self.repo.getAllData(query={"role": "manager", "branchId": validateData["branchId"], "status": "active"})
@@ -214,9 +216,11 @@ class EmployeeService():
                     result = {"status": False, "message": "Branch already has 2 manager"}
                     return result
             employees= self.repo.getAllData(query={"branchId": validateData["branchId"], "role": "employee", "status": "active"})
+            print("[EMPLOYEES LEN]", employees)
             if len(employees) >= 6:
                 result = {"status": False, "message": "Branch already has 6 employees"}
                 return result
+            
             print("[VALIDATE NEW EMPLOYEE]", validateData)
             emailUsed = self.repo.getData(query={"email": validateData["email"]})
             
@@ -232,7 +236,7 @@ class EmployeeService():
                 result = {"status": False, "message": "Failed to insert data"}
                 return result
             
-            history = HistoryService().createHistory(data={
+            history = self.historyService.createHistory(data={
                 "employeeId": employee["_id"],
                 "employeeName": employee["name"],
                 "description": f"New employee {validateData['name']} data inserted successfully",
@@ -281,7 +285,7 @@ class EmployeeService():
             if not res.acknowledged:
                 result = {"status": False, "message": "Failed to inactivate employee"}
                 return result
-            history = HistoryService().createHistory({
+            history = self.historyService.createHistory({
                 "employeeId": employee["_id"],
                 "employeeName" : employee["name"],
                 "description": f"Employee data {id} disabled successfully",
@@ -328,7 +332,7 @@ class EmployeeService():
             if not res.acknowledged:
                 result = {"status": False, "message": "Failed to inactivate employee"}
                 return result
-            history = HistoryService().createHistory({
+            history = self.historyService.createHistory({
                 "employeeId": employee["_id"],
                 "employeeName" : employee["name"],
                 "description": f"Employee data {id} activated successfully",
@@ -379,7 +383,7 @@ class EmployeeService():
             if not res.acknowledged:
                 result = {"status": False, "message": "Failed to delete employee"}
                 return result
-            history = HistoryService().createHistory({
+            history = self.historyService.createHistory({
                 "employeeId": employee["_id"],
                 "employeeName" : employee["name"],
                 "description": f"Employee data {id} removed successfully",
@@ -441,18 +445,15 @@ class EmployeeService():
         """
         try:
             validateData = LoginSchema().load(data)
-            if not validateData or not validateData.get('email') or not validateData.get('password'):
-                result = {"status": False, "message": "Missing email or password."}
-                return result
             
-            user = self.repo.getData(query={"email": data["email"]})
+            user = self.repo.getData(query={"email": validateData["email"]})
             if not user:
-                result = {"status": False, "message": "Email not found"}
+                result = {"status": False, "message": "Email or Password Invalid"}
                 return result
 
-            checkPassword = checkpw(data["password"].encode("utf-8"), user["password"])
+            checkPassword = checkpw(validateData["password"].encode("utf-8"), user["password"])
             if not checkPassword:
-                result = {"status": False, "message": "Invalid Password"}
+                result = {"status": False, "message": "Email or Password Invalid"}
                 return result
             
             if user["status"] == "inactive":
@@ -460,7 +461,7 @@ class EmployeeService():
                 return result
 
             token = SessionService().createToken(user)
-            history = HistoryService().createHistory({
+            history = self.historyService.createHistory({
                 "employeeId": user["_id"],
                 "employeeName": user["name"],
                 "description": f"Login successfully",
@@ -522,8 +523,9 @@ class EmployeeService():
         """
         try:
             validateData = self.updateSchema.load(data)
+            print("[UPDATE EMPLOYEE SERVICE VALIDATE DATA] : ", validateData)
             if validateData["role"] == "manager":
-                managers = self.repo.getAllData(query={"role": "manager", "branchId": validateData["branchId"]})
+                managers = self.repo.getAllData(query={"role": "manager", "branchId": validateData["branchId"], "name" : {"$ne": validateData["name"]}})
                 if len(managers) >= 1:
                     result = {"status": False, "message": "Branch already has a manager"}
                     return result
@@ -531,7 +533,7 @@ class EmployeeService():
             if not res.acknowledged:
                 result = {"status": False, "message": "Data update failed"}
                 return result
-            history = HistoryService().createHistory({
+            history = self.historyService.createHistory({
                 "employeeId": employee["_id"],
                 "employeeName" : employee["name"],
                 "description": f"Employee {validateData['name']} data updated successfully",

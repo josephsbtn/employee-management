@@ -16,6 +16,7 @@ class StoreService:
         self.updateSchema = UpdateStoreSchema()
         self.employeeRepo = EmployeeRepo()
         self.employeeSchema = EmployeeSchema()
+        self.historyService = HistoryService()
         
     def addStore(self, data, employeeId, employeeName ):
         """
@@ -44,7 +45,7 @@ class StoreService:
             if not store.acknowledged:
                 raise Exception("Failed to add store")
             
-            history = HistoryService().createHistory(data={
+            history = self.historyService.createHistory(data={
                 "description": "Store added successfully " + str(storeId) +" name "+ str(data["name"]),
                 "type": "branch",
                 "employeeId": employeeId,
@@ -96,7 +97,7 @@ class StoreService:
                 result = {"status": False, "message": "Failed to delete data"}
                 return result
             
-            history = HistoryService().createHistory(data={
+            history = self.historyService.createHistory(data={
                 "employeeId": employeeId,
                 "employeeName": employeeName,
                 "description": "Store deleted successfully " + str(id),
@@ -123,7 +124,7 @@ class StoreService:
                 result = {"status": False, "message": "Failed to update data"}
                 return result
             
-            history = HistoryService().createHistory(data={
+            history = self.historyService.createHistory(data={
                 "employeeId": employeeId,
                 "employeeName": employeeName,
                 "description": "Store updated successfully " + str(id),
@@ -153,7 +154,7 @@ class StoreService:
             if not data.acknowledged:
                 result = {"status": False, "message": "Failed to update data"}
                 return result
-            history = HistoryService().createHistory(data={
+            history = self.historyService.createHistory(data={
                 "employeeId": employee["_id"],
                 "employeeName": employee["name"],
                 "type": "branch",
@@ -173,7 +174,7 @@ class StoreService:
             if not data.acknowledged:
                 result = {"status": False, "message": "Failed to update data"}
                 return result
-            history = HistoryService().createHistory(data={
+            history = self.historyService.createHistory(data={
                 "employeeId": employee["_id"],
                 "employeeName": employee["name"],
                 "type": "branch",
