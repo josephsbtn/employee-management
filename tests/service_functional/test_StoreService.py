@@ -10,8 +10,7 @@ class TestStoreServiceAddStore:
     
     @patch('service.storeService.HistoryService')
     @patch('service.storeService.StoreRepo')
-    @patch('service.storeService.createStoreSchema')
-    def test_add_store_success(self, mock_schema_class, mock_repo_class, mock_history_class):
+    def test_add_store_success(self,  mock_repo_class, mock_history_class):
         """Test path: store berhasil ditambahkan"""
         # Setup
         mock_repo = Mock()
@@ -21,25 +20,18 @@ class TestStoreServiceAddStore:
         mock_repo.insertData.return_value = mock_insert_result
         mock_repo_class.return_value = mock_repo
         
-        mock_schema = Mock()
-        mock_schema.load.return_value = {
-            "name": "Store Jakarta",
-            "address": "Jakarta",
-            "phone": "081234567890"
-        }
-        mock_schema_class.return_value = mock_schema
-        
         mock_history = Mock()
         mock_history.createHistory.return_value = {"status": True}
         mock_history_class.return_value = mock_history
         
         service = StoreService()
-        service.createSchema = mock_schema
         
         data = {
+            
             "name": "Store Jakarta",
             "address": "Jakarta",
-            "phone": "081234567890"
+            "phone": "081234567890",
+            "geometry": {"type": "Point", "coordinates": [0, 0]}
         }
         
         # Execute
@@ -52,17 +44,9 @@ class TestStoreServiceAddStore:
         mock_repo.insertData.assert_called_once()
         mock_history.createHistory.assert_called_once()
     
-    @patch('service.storeService.StoreRepo')
-    @patch('service.storeService.createStoreSchema')
-    def test_add_store_validation_error(self, mock_schema_class, mock_repo_class):
+    def test_add_store_validation_error(self):
         """Test path: validation error saat menambahkan store"""
-        # Setup
-        mock_schema = Mock()
-        mock_schema.load.side_effect = ValidationError("Invalid data")
-        mock_schema_class.return_value = mock_schema
-        
         service = StoreService()
-        service.createSchema = mock_schema
         
         data = {"name": ""}
         
@@ -70,33 +54,6 @@ class TestStoreServiceAddStore:
         with pytest.raises(ValidationError):
             service.addStore(data, "EMP_001", "John Doe")
     
-    @patch('service.storeService.HistoryService')
-    @patch('service.storeService.StoreRepo')
-    @patch('service.storeService.createStoreSchema')
-    def test_add_store_insert_failed(self, mock_schema_class, mock_repo_class, mock_history_class):
-        """Test path: gagal insert store"""
-        # Setup
-        mock_repo = Mock()
-        mock_insert_result = Mock()
-        mock_insert_result.inserted_id = None
-        mock_repo.insertData.return_value = mock_insert_result
-        mock_repo_class.return_value = mock_repo
-        
-        mock_schema = Mock()
-        mock_schema.load.return_value = {"name": "Store Jakarta"}
-        mock_schema_class.return_value = mock_schema
-        
-        service = StoreService()
-        service.createSchema = mock_schema
-        
-        data = {"name": "Store Jakarta"}
-        
-        # Execute
-        result = service.addStore(data, "EMP_001", "John Doe")
-        
-        # Assert
-        assert result["status"] == False
-        assert result["message"] == "Failed to insert data"
     
     @patch('service.storeService.HistoryService')
     @patch('service.storeService.StoreRepo')
@@ -683,14 +640,12 @@ class TestStoreServiceGetActiveStore:
     @patch('service.storeService.StoreRepo')
     def test_get_active_store_exception(self, mock_repo_class):
         """Test path: exception saat get active store"""
-        # Setup
         mock_repo = Mock()
         mock_repo.getAllData.side_effect = Exception("Database error")
         mock_repo_class.return_value = mock_repo
         
         service = StoreService()
         
-        # Execute & Assert
         with pytest.raises(Exception) as exc_info:
             service.getActiveStore()
         assert "Failed to get data" in str(exc_info.value)

@@ -1,4 +1,5 @@
 .venv
+.env
 validation/__pycache__
 validation/employee/__pycache__
 repo/__pycache__
@@ -8,4 +9,6 @@ service/__pycache__
 routes/page/__pycache__
 tests/__pycache__
 tests/integration/__pycache__
+tests/service_functional/__pycache__
 test.py
+.pytest_cache

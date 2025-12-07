@@ -33,8 +33,8 @@ class StoreService:
         try:
             id = "STR_"+str(random.randint(10, 99))+datetime.now().strftime("%Y%m%d%H%M%S")
             print("[SERVICE ADD STORE : ]" , id )
-            data = self.createSchema.load(data)
             data["_id"] = id
+            data = self.createSchema.load(data)
             print("[SERVICE ADD STORE : ]" , data )
             store = self.repo.insertData(data)
             storeId = str(store.inserted_id)
@@ -190,14 +190,14 @@ class StoreService:
     def getStoreDetails(self, id):
         try:
             data = self.repo.getData(id=id)
+            if data == None:
+                return {"status": False, "message": "Data not found"}
             employees = self.employeeRepo.getAllData(query={"branchId": id})
             validate = []
             for emp in employees:
                 dump = self.employeeSchema.dump(emp)
                 validate.append(dump)
             data["employees"] = validate
-            if data == None:
-                return {"status": False, "message": "Data not found"}
             return {"status": True, "message": "Data fetched successfully", "data": data}
         except Exception as e:
             raise Exception(f"Failed to get data {e}")
