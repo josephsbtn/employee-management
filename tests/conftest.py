@@ -32,11 +32,6 @@ def mock_leave_request_repo():
     repo = Mock()
     return repo
 
-@pytest.fixture
-def mock_attendance_repo():
-    """Mock AttendanceRepo untuk testing"""
-    repo = Mock()
-    return repo
 
 @pytest.fixture
 def sample_list_employees(sample_employee, sample_manager, sample_owner):
