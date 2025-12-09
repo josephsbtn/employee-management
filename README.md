@@ -9,7 +9,9 @@
 <p>
   <img alt="Login screen" src="github/readme-image/login.png" width="360" />
 </p>
-
+<p>
+  <img alt="Login screen" src="github/readme-image/employee-list.png" width="360" />
+</p>
 <p align="center">
   <a href="https://github.com/josephsbtn/employee-management/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/josephsbtn/employee-management/actions/workflows/ci.yml/badge.svg"></a>
   <img alt="tests" src="https://img.shields.io/badge/tests-55%20passed-brightgreen">
